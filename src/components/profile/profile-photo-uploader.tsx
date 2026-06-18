@@ -1,0 +1,150 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Loader2, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type ProfilePhotoUploaderProps = {
+  name: string;
+  avatarUrl?: string | null;
+  helperText?: string;
+  className?: string;
+};
+
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+export function ProfilePhotoUploader({
+  name,
+  avatarUrl,
+  helperText = "JPG, PNG, WEBP, or GIF up to 5MB.",
+  className
+}: ProfilePhotoUploaderProps) {
+  const router = useRouter();
+  const { data: session, update } = useSession();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const currentImage = avatarUrl || session?.user?.image || "";
+  const initials = getInitials(name || session?.user?.name || session?.user?.email || "CC");
+
+  async function uploadAvatar(file: File) {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Please upload a JPG, PNG, WEBP, or GIF image.");
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE) {
+      throw new Error("Profile photo must be 5MB or smaller.");
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/account/avatar", {
+      method: "POST",
+      body: formData
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          success?: boolean;
+          message?: string;
+          data?: { avatarUrl?: string };
+          error?: { message?: string };
+        }
+      | null;
+
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.error?.message ?? payload?.message ?? "Unable to upload photo.");
+    }
+
+    const avatarImage = payload.data?.avatarUrl ?? "";
+    if (avatarImage) {
+      await update({ image: avatarImage } as never);
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex w-full flex-col gap-4 rounded-3xl border border-border/60 bg-background/70 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between",
+        className
+      )}
+    >
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          className="group relative rounded-full outline-none ring-offset-background transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={() => inputRef.current?.click()}
+          aria-label="Upload profile photo"
+        >
+          <Avatar className="h-16 w-16 border border-border/60 bg-background shadow-sm">
+            {currentImage ? <AvatarImage src={currentImage} alt={name} /> : null}
+            <AvatarFallback className="text-base">{initials || "CC"}</AvatarFallback>
+          </Avatar>
+          <span className="absolute inset-0 grid place-items-center rounded-full bg-background/0 opacity-0 transition group-hover:bg-background/15 group-hover:opacity-100">
+            <Upload className="h-4 w-4 text-foreground" />
+          </span>
+        </button>
+
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">Profile photo</p>
+          <p className="text-sm text-muted-foreground">{helperText}</p>
+        </div>
+      </div>
+
+      <Button
+        className="rounded-2xl sm:self-center"
+        disabled={isUploading}
+        type="button"
+        variant="outline"
+        onClick={() => inputRef.current?.click()}
+      >
+        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        {isUploading ? "Uploading..." : currentImage ? "Change photo" : "Upload photo"}
+      </Button>
+
+      <input
+        ref={inputRef}
+        accept="image/*"
+        aria-hidden="true"
+        className="hidden"
+        type="file"
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+
+          if (!file) {
+            return;
+          }
+
+          setIsUploading(true);
+
+          try {
+            await uploadAvatar(file);
+            toast.success("Profile photo updated.");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to upload photo.");
+          } finally {
+            setIsUploading(false);
+          }
+        }}
+      />
+    </div>
+  );
+}

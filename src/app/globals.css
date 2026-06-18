@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-cyan-rgb: 19, 217, 203;
+  --brand-sky-rgb: 43, 185, 255;
+  --brand-navy-rgb: 4, 14, 38;
+  --brand-teal-rgb: 7, 108, 130;
+
+  --background: 210 40% 98%;
+  --foreground: 222.35 80.95% 8.24%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.35 80.95% 8.24%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.35 80.95% 8.24%;
+  --primary: 190.73 89.78% 26.86%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 199.81 100% 96%;
+  --secondary-foreground: 222.35 80.95% 8.24%;
+  --muted: 210 40% 96.5%;
+  --muted-foreground: 215.4 16.3% 43.9%;
+  --accent: 199.81 100% 94%;
+  --accent-foreground: 190.73 89.78% 26.86%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 198 46% 90%;
+  --input: 198 46% 90%;
+  --ring: 199.81 100% 58.43%;
+  --radius: 1rem;
+}
+
+.dark {
+  --background: 222.35 80.95% 8.24%;
+  --foreground: 210 40% 98%;
+  --card: 220 40% 12%;
+  --card-foreground: 210 40% 98%;
+  --popover: 220 40% 12%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 199.81 100% 58.43%;
+  --primary-foreground: 222.35 80.95% 8.24%;
+  --secondary: 220 40% 14%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 220 36% 16%;
+  --muted-foreground: 215 20.2% 70.1%;
+  --accent: 191 70% 18%;
+  --accent-foreground: 175.76 83.9% 82%;
+  --destructive: 0 62.8% 50.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 220 36% 18%;
+  --input: 220 36% 18%;
+  --ring: 199.81 100% 58.43%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(7, 128, 150, 0.78) rgba(226, 240, 246, 0.7);
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at top left, rgba(var(--brand-sky-rgb), 0.14), transparent 30%),
+      radial-gradient(circle at top right, rgba(var(--brand-cyan-rgb), 0.12), transparent 26%),
+      radial-gradient(circle at bottom center, rgba(var(--brand-navy-rgb), 0.05), transparent 38%);
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at top left, rgba(var(--brand-sky-rgb), 0.16), transparent 28%),
+      radial-gradient(circle at top right, rgba(var(--brand-cyan-rgb), 0.12), transparent 26%),
+      radial-gradient(circle at bottom center, rgba(var(--brand-navy-rgb), 0.36), transparent 42%);
+  }
+
+  ::selection {
+    background: rgba(var(--brand-sky-rgb), 0.2);
+    color: hsl(var(--foreground));
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(226, 240, 246, 0.7);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid rgba(226, 240, 246, 0.7);
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      rgba(var(--brand-teal-rgb), 0.84),
+      rgba(var(--brand-sky-rgb), 0.84)
+    );
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(var(--brand-teal-rgb), 0.96),
+      rgba(var(--brand-sky-rgb), 0.96)
+    );
+  }
+}
+
+@layer utilities {
+  @keyframes care-hero-slide {
+    0%,
+    28% {
+      transform: translateX(0);
+    }
+
+    34%,
+    62% {
+      transform: translateX(-33.3333%);
+    }
+
+    68%,
+    95% {
+      transform: translateX(-66.6666%);
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-care-hero-slide {
+    animation: care-hero-slide 12s ease-in-out infinite;
+  }
+
+  @keyframes hero-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+
+    50% {
+      transform: translate3d(0, -6px, 0);
+    }
+  }
+
+  .animate-hero-float {
+    animation: hero-float 6s ease-in-out infinite;
+  }
+
+  @keyframes hero-card-drop {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, -13rem, 0) scale(0.94) rotate(calc(var(--hero-card-rotate, 0deg) - 10deg));
+    }
+
+    72% {
+      opacity: 1;
+      transform: translate3d(0, 1.1rem, 0) scale(1.01) rotate(calc(var(--hero-card-rotate, 0deg) + 1.5deg));
+    }
+
+    84% {
+      opacity: 1;
+      transform: translate3d(0, -0.3rem, 0) scale(1) rotate(calc(var(--hero-card-rotate, 0deg) - 0.4deg));
+    }
+
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1) rotate(var(--hero-card-rotate, 0deg));
+    }
+  }
+
+  .hero-card-drop {
+    animation: hero-card-drop var(--hero-drop-duration, 1.85s) cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
+  }
+
+  @keyframes hero-chip-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+
+    50% {
+      transform: translate3d(0, -16px, 0) scale(1.02);
+    }
+  }
+
+  .hero-chip-float {
+    animation: hero-chip-float var(--hero-float-duration, 4.8s) ease-in-out infinite;
+  }
+
+  @keyframes hero-chip-float-bottom {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+
+    50% {
+      transform: translate3d(0, -6px, 0) scale(1.01);
+    }
+  }
+
+  .hero-chip-float-bottom {
+    animation: hero-chip-float-bottom var(--hero-float-duration, 6s) ease-in-out infinite;
+  }
+
+  @keyframes landing-marquee {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-landing-marquee {
+    animation: landing-marquee 40s linear infinite;
+  }
+
+  @keyframes shift-video-scroll {
+    0%,
+    24% {
+      transform: translateY(0);
+    }
+
+    42%,
+    66% {
+      transform: translateY(-7.5rem);
+    }
+
+    82%,
+    100% {
+      transform: translateY(-14.5rem);
+    }
+  }
+
+  .animate-shift-video-scroll {
+    animation: shift-video-scroll 8s ease-in-out infinite;
+  }
+
+  @keyframes faq-card-fade {
+    0%,
+    6% {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0) scale(0.95);
+    }
+
+    14%,
+    36% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    44%,
+    100% {
+      opacity: 0;
+      transform: translate3d(0, -8px, 0) scale(0.98);
+    }
+  }
+
+  .faq-card-fade {
+    animation: faq-card-fade 15s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+}
