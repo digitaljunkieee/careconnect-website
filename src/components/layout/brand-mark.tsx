@@ -6,6 +6,7 @@ type BrandMarkProps = {
   className?: string;
   compact?: boolean;
   inverse?: boolean;
+  glyphClassName?: string;
 };
 
 type BrandWatermarkProps = {
@@ -49,15 +50,19 @@ export function BrandGlyph({
 export function BrandMark({
   className,
   compact = false,
-  inverse = false
+  inverse = false,
+  glyphClassName
 }: BrandMarkProps) {
   return (
     <Link href="/" className={cn("inline-flex items-center gap-3", className)}>
       {inverse ? (
-        <BrandGlyph variant="wordmark" className="border-white/10 shadow-none" />
+        <BrandGlyph
+          variant="wordmark"
+          className={cn("border-white/10 shadow-none", glyphClassName)}
+        />
       ) : (
         <>
-          <BrandGlyph />
+          <BrandGlyph className={glyphClassName} />
           <span className="flex flex-col">
             <span
               className={cn(

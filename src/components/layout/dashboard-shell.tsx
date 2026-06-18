@@ -8,8 +8,6 @@ import {
   LogOut,
   Menu,
   MoonStar,
-  PanelLeftClose,
-  PanelLeftOpen,
   Search,
   SunMedium,
 } from "lucide-react";
@@ -29,7 +27,7 @@ import {
   SheetContent,
   SheetTrigger
 } from "@/components/ui/sheet";
-import { BrandGlyph } from "@/components/layout/brand-mark";
+import { BrandMark, BrandGlyph } from "@/components/layout/brand-mark";
 import { useDashboardTheme } from "@/components/providers/dashboard-theme-provider";
 import { DASHBOARD_NAVIGATION, type DashboardNavItem } from "@/lib/navigation";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
@@ -85,6 +83,9 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+  const userEmail = session?.user?.email ?? "CareConnect account";
+  const currentPageLabel =
+    navItems.find((item) => isActivePath(pathname, item))?.label ?? ROLE_LABELS[role];
 
   React.useEffect(() => {
     const storedValue = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
@@ -150,41 +151,25 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
   function SidebarContent({
     compact = false,
     closeOnNavigate = false,
-    showCollapseToggle = false
   }: {
     compact?: boolean;
     closeOnNavigate?: boolean;
-    showCollapseToggle?: boolean;
   }) {
     return (
       <div className="relative flex h-full flex-col">
-        {showCollapseToggle ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="absolute -right-3 top-7 z-20 hidden h-10 w-10 rounded-full border-border/70 bg-background/95 shadow-[0_10px_30px_rgba(2,6,23,0.18)] transition-transform hover:scale-105 lg:inline-flex"
-            aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-pressed={isSidebarCollapsed}
-            onClick={() => setIsSidebarCollapsed((value) => !value)}
-          >
-            {isSidebarCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
-          </Button>
-        ) : null}
-
-        <div className={cn("px-4 pt-3", compact && "px-3 pt-3")}>
+        <div
+          className={cn(
+            "flex items-center gap-3 px-4 pt-3",
+            compact && "px-3 pt-3"
+          )}
+        >
           {compact ? (
-            <div className="flex items-center justify-center">
-              <BrandGlyph className="h-11 w-11" />
-            </div>
+            <BrandGlyph className="h-10 w-10 border-0 bg-transparent shadow-none" />
           ) : (
-            <BrandGlyph
-              variant="wordmark"
-              className="h-11 w-[12rem] max-w-full rounded-2xl border-0 bg-transparent shadow-none"
+            <BrandMark
+              compact
+              className="max-w-full"
+              glyphClassName="border-0 bg-transparent shadow-none"
             />
           )}
         </div>
@@ -201,6 +186,49 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
 
         </nav>
 
+        <div className={cn("mt-auto border-t border-border/60", compact ? "px-2 py-3" : "px-4 py-4")}>
+          {role === "FACILITY" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size={compact ? "icon" : "default"}
+              className={cn(
+                compact
+                  ? "h-10 w-10 rounded-full border border-white/8 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+                  : "h-11 w-full justify-start rounded-2xl border border-white/8 bg-white/5 px-4 text-white/80 hover:bg-white/10 hover:text-white"
+              )}
+              aria-label="Sign out"
+              onClick={() => {
+                void signOut({ callbackUrl: "/login" });
+              }}
+            >
+              <LogOut className={cn("h-4 w-4", compact ? "" : "mr-2")} />
+              {!compact ? <span>Sign out</span> : null}
+            </Button>
+          ) : (
+            <div
+              className={cn(
+                "flex items-center gap-3 rounded-2xl bg-muted/45 p-3",
+                compact && "justify-center p-2"
+              )}
+            >
+              <Avatar className="h-10 w-10 shrink-0 rounded-full">
+                {session?.user?.image ? (
+                  <AvatarImage src={session.user.image} alt={userName} />
+                ) : null}
+                <AvatarFallback className="rounded-full bg-primary/10 text-primary">
+                  {initials || "CC"}
+                </AvatarFallback>
+              </Avatar>
+              {!compact ? (
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
+                  <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -210,17 +238,17 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
       <div className="relative z-10 flex min-h-screen">
         <aside
           className={cn(
-            "relative hidden border-r border-border/70 bg-background/70 backdrop-blur-2xl shadow-[12px_0_40px_rgba(2,6,23,0.08)] transition-[width] duration-300 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto",
+            "relative hidden border-r border-border/70 bg-background/70 backdrop-blur-2xl shadow-[12px_0_40px_rgba(2,6,23,0.08)] transition-[width] duration-300 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden",
             isSidebarCollapsed ? "w-20" : "w-64"
           )}
         >
-          <SidebarContent compact={isSidebarCollapsed} showCollapseToggle />
+          <SidebarContent compact={isSidebarCollapsed} />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 border-b border-border/70 bg-background/75 backdrop-blur-xl">
             <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button
@@ -237,9 +265,10 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     className="w-[min(20rem,calc(100vw-1rem))] rounded-r-3xl"
                   >
                     <div className="px-1 pt-2">
-                      <BrandGlyph
-                        variant="wordmark"
-                        className="h-11 w-[12rem] rounded-2xl border-0 bg-transparent shadow-none"
+                      <BrandMark
+                        compact
+                        className="max-w-full"
+                        glyphClassName="border-0 bg-transparent shadow-none"
                       />
                     </div>
                     <div className="mt-5">
@@ -247,8 +276,19 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     </div>
                   </SheetContent>
                 </Sheet>
-                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
-                  {ROLE_LABELS[role]}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="hidden h-10 w-10 shrink-0 rounded-full border border-border/70 bg-background/80 shadow-sm transition-transform hover:scale-105 lg:inline-flex"
+                  aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  aria-pressed={isSidebarCollapsed}
+                  onClick={() => setIsSidebarCollapsed((value) => !value)}
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+                <p className="text-sm font-semibold tracking-[0.12em] text-foreground/80">
+                  {currentPageLabel}
                 </p>
               </div>
 

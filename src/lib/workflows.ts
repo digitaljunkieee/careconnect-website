@@ -79,6 +79,9 @@ export async function saveFacilityProfile(
     companyName: string;
     address?: string;
     contactNumber?: string;
+    website?: string;
+    facilityType?: string;
+    description?: string;
   }
 ) {
   await connectDB();
@@ -92,7 +95,10 @@ export async function saveFacilityProfile(
       $set: {
         companyName: input.companyName.trim(),
         address: input.address?.trim() ?? "",
-        contactNumber: input.contactNumber?.trim() ?? ""
+        contactNumber: input.contactNumber?.trim() ?? "",
+        website: input.website?.trim() ?? "",
+        facilityType: input.facilityType?.trim() ?? "",
+        description: input.description?.trim() ?? ""
       }
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }

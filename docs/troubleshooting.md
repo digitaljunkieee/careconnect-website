@@ -3,7 +3,7 @@
 ## Sign-In Issues
 
 - Confirm the account exists and is active.
-- Check `DATABASE_URL`, `AUTH_URL`, and `AUTH_SECRET`.
+- Check `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, and `NEXT_PUBLIC_BACKEND_URL`.
 - If you are using the demo seed, open the `frontend` folder and verify that the demo password matches the value printed by `npm run seed:demo`.
 
 ## Verification Submission Fails

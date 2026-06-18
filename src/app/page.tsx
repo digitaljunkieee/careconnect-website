@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ROLE_HOME } from "@/lib/constants";
 import {
   AudienceSwitchSection,
-  BenefitsSection,
   ContactSection,
   FaqSection,
   HeroSection,

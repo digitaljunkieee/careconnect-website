@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkerApplicationsTable } from "@/components/worker/worker-applications-table";
 import { getWorkerApplicationsData } from "@/lib/worker-portal";

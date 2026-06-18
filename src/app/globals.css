@@ -153,6 +153,84 @@
     animation: hero-float 6s ease-in-out infinite;
   }
 
+  @keyframes hero-copy-reveal-left {
+    0% {
+      opacity: 0;
+      transform: translate3d(-24px, 26px, 0) scale(0.985);
+      filter: blur(14px);
+    }
+
+    62% {
+      opacity: 1;
+      transform: translate3d(4px, -2px, 0) scale(1.01);
+      filter: blur(2px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .hero-copy-reveal-left {
+    animation: hero-copy-reveal-left var(--hero-copy-duration, 900ms)
+      cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity, filter;
+  }
+
+  @keyframes hero-copy-reveal-right {
+    0% {
+      opacity: 0;
+      transform: translate3d(28px, 22px, 0) scale(0.98);
+      filter: blur(14px);
+    }
+
+    62% {
+      opacity: 1;
+      transform: translate3d(-4px, -2px, 0) scale(1.01);
+      filter: blur(2px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .hero-copy-reveal-right {
+    animation: hero-copy-reveal-right var(--hero-copy-duration, 980ms)
+      cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity, filter;
+  }
+
+  @keyframes hero-line-sweep {
+    0% {
+      opacity: 0;
+      transform: scaleX(0.18);
+      filter: blur(2px);
+    }
+
+    66% {
+      opacity: 1;
+      transform: scaleX(1.05);
+      filter: blur(0);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scaleX(1);
+      filter: blur(0);
+    }
+  }
+
+  .hero-line-sweep {
+    animation: hero-line-sweep var(--hero-line-duration, 820ms)
+      cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity, filter;
+  }
+
   @keyframes hero-card-drop {
     0% {
       opacity: 0;

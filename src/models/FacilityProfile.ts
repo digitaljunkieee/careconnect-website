@@ -7,6 +7,9 @@ export interface FacilityProfileDocument {
   companyName: string;
   address: string;
   contactNumber: string;
+  website: string;
+  facilityType: string;
+  description: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +35,18 @@ const facilityProfileSchema = new Schema<FacilityProfileDocument>(
     contactNumber: {
       type: String,
       default: ""
+    },
+    website: {
+      type: String,
+      default: ""
+    },
+    facilityType: {
+      type: String,
+      default: ""
+    },
+    description: {
+      type: String,
+      default: ""
     }
   },
   {
@@ -39,7 +54,13 @@ const facilityProfileSchema = new Schema<FacilityProfileDocument>(
   }
 );
 
-facilityProfileSchema.index({ companyName: "text", address: "text" });
+facilityProfileSchema.index({
+  companyName: "text",
+  address: "text",
+  website: "text",
+  facilityType: "text",
+  description: "text"
+});
 facilityProfileSchema.index({ createdAt: -1 });
 
 const FacilityProfile = getModel<FacilityProfileDocument>(

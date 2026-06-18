@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import {
   ArrowUpRight,
   BriefcaseMedical,
-  CalendarDays,
   Users,
   UserRound
 } from "lucide-react";
@@ -77,9 +76,6 @@ export default async function FacilityDashboardPage() {
       <section className="grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
         <Card className="overflow-hidden border-border/70">
           <div className="bg-[radial-gradient(circle_at_top_right,_rgba(var(--brand-sky-rgb),0.22),transparent_26%),radial-gradient(circle_at_bottom_left,_rgba(var(--brand-cyan-rgb),0.14),transparent_20%),linear-gradient(135deg,rgba(var(--brand-navy-rgb),0.95),rgba(7,108,130,0.92))] p-6 text-white sm:p-8">
-            <Badge className="rounded-full bg-white/15 text-white" variant="outline">
-              Facility overview
-            </Badge>
             <h2 className="mt-4 max-w-xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               Welcome back, {data.companyName}
             </h2>

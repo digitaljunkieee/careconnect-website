@@ -24,6 +24,9 @@ type LeanFacilityProfile = {
   companyName?: string;
   address?: string;
   contactNumber?: string;
+  website?: string;
+  facilityType?: string;
+  description?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -76,6 +79,9 @@ export type FacilityProfileData = {
   companyName: string;
   address: string;
   contactNumber: string;
+  website: string;
+  facilityType: string;
+  description: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -187,6 +193,9 @@ export async function getFacilityProfileData(userId: string) {
     companyName: profile.companyName ?? "",
     address: profile.address ?? "",
     contactNumber: profile.contactNumber ?? "",
+    website: profile.website ?? "",
+    facilityType: profile.facilityType ?? "",
+    description: profile.description ?? "",
     firstName: user?.firstName ?? "",
     lastName: user?.lastName ?? "",
     email: user?.email ?? "",
@@ -536,7 +545,10 @@ export async function getFacilityApplicantListData(
   const { rows, total, pageCount } = paginate(filtered, filters.page, filters.pageSize);
 
   return {
-    rows: rows.map(({ sortDate: _sortDate, ...row }) => row) as ApplicantRow[],
+    rows: rows.map(({ sortDate, ...row }) => {
+      void sortDate;
+      return row;
+    }) as ApplicantRow[],
     total,
     page: filters.page,
     pageSize: filters.pageSize,

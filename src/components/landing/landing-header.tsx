@@ -118,7 +118,7 @@ export function LandingHeader() {
         />
 
         <nav
-          className="hidden w-[min(46vw,34rem)] flex-none items-center justify-end gap-6 lg:ml-3 lg:flex xl:ml-6"
+          className="hidden w-[min(46vw,34rem)] flex-none items-center justify-start gap-6 lg:ml-5 lg:flex xl:ml-9 2xl:ml-12"
           aria-label="Primary"
         >
           {sectionLinks.map((link) => (

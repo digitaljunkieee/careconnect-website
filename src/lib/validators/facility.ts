@@ -3,7 +3,10 @@ import { z } from "zod";
 export const facilityProfileSchema = z.object({
   companyName: z.string().trim().min(2, "Company name is required.").max(120),
   address: z.string().trim().max(300).optional().default(""),
-  contactNumber: z.string().trim().max(30).optional().default("")
+  contactNumber: z.string().trim().max(30).optional().default(""),
+  website: z.string().trim().max(200).optional().default(""),
+  facilityType: z.string().trim().max(80).optional().default(""),
+  description: z.string().trim().max(1200).optional().default("")
 });
 
 export type FacilityProfileInput = z.infer<typeof facilityProfileSchema>;

@@ -14,6 +14,13 @@ type ProfilePhotoUploaderProps = {
   avatarUrl?: string | null;
   helperText?: string;
   className?: string;
+  surface?: "card" | "inline";
+  title?: string;
+  entityLabel?: string;
+  uploadLabel?: string;
+  changeLabel?: string;
+  avatarClassName?: string;
+  buttonClassName?: string;
 };
 
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
@@ -31,15 +38,47 @@ export function ProfilePhotoUploader({
   name,
   avatarUrl,
   helperText = "JPG, PNG, WEBP, or GIF up to 5MB.",
-  className
+  className,
+  surface = "card",
+  title = "Profile photo",
+  entityLabel = "profile photo",
+  uploadLabel = "Upload photo",
+  changeLabel = "Change photo",
+  avatarClassName,
+  buttonClassName
 }: ProfilePhotoUploaderProps) {
   const router = useRouter();
   const { data: session, update } = useSession();
   const [isUploading, setIsUploading] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const isInline = surface === "inline";
 
   const currentImage = avatarUrl || session?.user?.image || "";
   const initials = getInitials(name || session?.user?.name || session?.user?.email || "CC");
+  const uploadActionLabel = currentImage ? changeLabel : uploadLabel;
+  const wrapperClassName = cn(
+    isInline
+      ? "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      : "flex w-full flex-col gap-4 rounded-3xl border border-border/60 bg-background/70 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between",
+    className
+  );
+  const avatarStyles = cn(
+    "relative flex items-center justify-center rounded-[1.75rem] outline-none ring-offset-background transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    isInline
+      ? "h-20 w-20 border border-white/8 bg-[#15243A] shadow-[0_18px_36px_rgba(4,14,38,0.35)]"
+      : "h-16 w-16 border border-border/60 bg-background shadow-sm",
+    avatarClassName
+  );
+  const helperClassName = cn(
+    "text-sm",
+    isInline ? "text-white/60" : "text-muted-foreground"
+  );
+  const buttonStyles = cn(
+    isInline
+      ? "rounded-full border border-white/8 bg-[#15243A] text-white shadow-none hover:bg-white/10 hover:text-white"
+      : "",
+    buttonClassName
+  );
 
   async function uploadAvatar(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -47,7 +86,7 @@ export function ProfilePhotoUploader({
     }
 
     if (file.size > MAX_UPLOAD_SIZE) {
-      throw new Error("Profile photo must be 5MB or smaller.");
+      throw new Error(`${title} must be 5MB or smaller.`);
     }
 
     const formData = new FormData();
@@ -68,7 +107,7 @@ export function ProfilePhotoUploader({
       | null;
 
     if (!response.ok || !payload?.success) {
-      throw new Error(payload?.error?.message ?? payload?.message ?? "Unable to upload photo.");
+      throw new Error(payload?.error?.message ?? payload?.message ?? `Unable to upload ${entityLabel}.`);
     }
 
     const avatarImage = payload.data?.avatarUrl ?? "";
@@ -80,43 +119,40 @@ export function ProfilePhotoUploader({
   }
 
   return (
-    <div
-      className={cn(
-        "flex w-full flex-col gap-4 rounded-3xl border border-border/60 bg-background/70 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between",
-        className
-      )}
-    >
+    <div className={wrapperClassName}>
       <div className="flex items-center gap-4">
         <button
           type="button"
-          className="group relative rounded-full outline-none ring-offset-background transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="group relative outline-none ring-offset-background transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={() => inputRef.current?.click()}
-          aria-label="Upload profile photo"
+          aria-label={`${currentImage ? "Change" : "Upload"} ${entityLabel}`}
         >
-          <Avatar className="h-16 w-16 border border-border/60 bg-background shadow-sm">
+          <Avatar className={avatarStyles}>
             {currentImage ? <AvatarImage src={currentImage} alt={name} /> : null}
-            <AvatarFallback className="text-base">{initials || "CC"}</AvatarFallback>
+            <AvatarFallback className="rounded-[1.5rem] text-base">{initials || "CC"}</AvatarFallback>
           </Avatar>
-          <span className="absolute inset-0 grid place-items-center rounded-full bg-background/0 opacity-0 transition group-hover:bg-background/15 group-hover:opacity-100">
+          <span className="absolute inset-0 grid place-items-center rounded-[1.75rem] bg-background/0 opacity-0 transition group-hover:bg-background/15 group-hover:opacity-100">
             <Upload className="h-4 w-4 text-foreground" />
           </span>
         </button>
 
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">Profile photo</p>
-          <p className="text-sm text-muted-foreground">{helperText}</p>
+          <p className={cn("text-sm font-semibold", isInline ? "text-white" : "text-foreground")}>
+            {title}
+          </p>
+          <p className={helperClassName}>{helperText}</p>
         </div>
       </div>
 
       <Button
-        className="rounded-2xl sm:self-center"
+        className={cn("rounded-2xl sm:self-center", buttonStyles)}
         disabled={isUploading}
         type="button"
         variant="outline"
         onClick={() => inputRef.current?.click()}
       >
         {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        {isUploading ? "Uploading..." : currentImage ? "Change photo" : "Upload photo"}
+        {isUploading ? "Uploading..." : uploadActionLabel}
       </Button>
 
       <input
@@ -137,9 +173,9 @@ export function ProfilePhotoUploader({
 
           try {
             await uploadAvatar(file);
-            toast.success("Profile photo updated.");
+            toast.success(`${title} updated.`);
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Unable to upload photo.");
+            toast.error(error instanceof Error ? error.message : `Unable to upload ${entityLabel}.`);
           } finally {
             setIsUploading(false);
           }

@@ -16,6 +16,10 @@ const floatingPillClass =
 const floatingStatCardClass =
   "rounded-[1.4rem] border border-[rgba(255,255,255,0.28)] bg-[rgba(255,255,255,0.14)] px-4 py-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-[16px]";
 
+const heroCopyRevealLeftClass = "hero-copy-reveal-left motion-reduce:animate-none";
+const heroCopyRevealRightClass = "hero-copy-reveal-right motion-reduce:animate-none";
+const heroLineSweepClass = "hero-line-sweep motion-reduce:animate-none";
+
 export function HeroSection() {
   return (
     <section className="relative isolate overflow-hidden bg-[linear-gradient(180deg,#f9fcff_0%,#edf7fb_100%)] lg:min-h-[100svh]">
@@ -24,9 +28,9 @@ export function HeroSection() {
       <div className="grid lg:min-h-[100svh] lg:grid-cols-[1fr_1.02fr]">
         <div className="relative flex items-start overflow-hidden bg-white px-6 pb-8 pt-20 sm:px-8 sm:pb-10 sm:pt-24 lg:min-h-[100svh] lg:px-12 lg:pb-16 lg:pt-24 xl:px-16">
           <div className="relative z-10 mx-auto w-full max-w-[44rem] text-left">
-            <div className="relative max-w-[44rem] pt-5 pb-5">
-              <span className="pointer-events-none absolute right-0 top-0 h-1 w-[7.5rem] rounded-full bg-[#13d9cb] opacity-95 sm:w-[11rem] md:w-[13rem]" />
-              <span className="pointer-events-none absolute left-0 bottom-0 h-1 w-[8.5rem] rounded-full bg-[#2bb9ff] opacity-95 sm:w-[12.5rem] md:w-[15rem]" />
+            <div className={`${heroCopyRevealLeftClass} relative max-w-[44rem] pt-5 pb-5`} style={{ animationDelay: "80ms" }}>
+              <span className={`pointer-events-none absolute right-0 top-0 h-1 w-[7.5rem] origin-right rounded-full bg-[#13d9cb] opacity-95 sm:w-[11rem] md:w-[13rem] ${heroLineSweepClass}`} style={{ animationDelay: "120ms" }} />
+              <span className={`pointer-events-none absolute left-0 bottom-0 h-1 w-[8.5rem] origin-left rounded-full bg-[#2bb9ff] opacity-95 sm:w-[12.5rem] md:w-[15rem] ${heroLineSweepClass}`} style={{ animationDelay: "170ms" }} />
               <h1 className="max-w-[44rem] font-display text-[clamp(3rem,5vw,4.75rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-slate-950">
                 <span className="block">Connecting verified care</span>
                 <span className="block">professionals with</span>
@@ -34,12 +38,18 @@ export function HeroSection() {
               </h1>
             </div>
 
-            <p className="mt-4 max-w-[40rem] text-[0.95rem] leading-6 text-slate-600 sm:text-base sm:leading-7">
+            <p
+              className={`${heroCopyRevealLeftClass} mt-4 max-w-[40rem] text-[0.95rem] leading-6 text-slate-600 sm:text-base sm:leading-7`}
+              style={{ animationDelay: "220ms" }}
+            >
               Find flexible care shifts or fill staffing gaps through a trusted,
               verified healthcare staffing marketplace.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div
+              className={`${heroCopyRevealLeftClass} mt-6 flex flex-col gap-3 sm:flex-row sm:items-center`}
+              style={{ animationDelay: "320ms" }}
+            >
               <Button
                 asChild
                 size="lg"
@@ -61,10 +71,11 @@ export function HeroSection() {
             </div>
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {trustPoints.map((point) => (
+              {trustPoints.map((point, index) => (
                 <div
                   key={point}
-                  className="flex items-center gap-2 rounded-full border border-sky-100/80 bg-white/[0.85] px-3.5 py-2 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm sm:text-sm"
+                  className={`${heroCopyRevealLeftClass} flex items-center gap-2 rounded-full border border-sky-100/80 bg-white/[0.85] px-3.5 py-2 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm sm:text-sm`}
+                  style={{ animationDelay: `${440 + index * 90}ms` }}
                 >
                   <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Check className="h-3.5 w-3.5" />
@@ -75,13 +86,19 @@ export function HeroSection() {
             </div>
 
             <div className="mt-6 hidden max-w-[23rem] grid-cols-2 gap-3 2xl:grid">
-              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div
+                className={`${heroCopyRevealLeftClass} rounded-[1.35rem] border border-slate-200 bg-slate-50/80 px-4 py-4`}
+                style={{ animationDelay: "620ms" }}
+              >
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
                   Verified Workers
                 </p>
                 <p className="mt-2 text-lg font-semibold text-slate-950">2,500+</p>
               </div>
-              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div
+                className={`${heroCopyRevealLeftClass} rounded-[1.35rem] border border-slate-200 bg-slate-50/80 px-4 py-4`}
+                style={{ animationDelay: "710ms" }}
+              >
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
                   Care Providers
                 </p>
@@ -91,7 +108,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="-mt-3 relative h-[34rem] overflow-hidden rounded-none bg-[linear-gradient(180deg,#d7dce1_0%,#e8ecef_18%,#f4f6f8_34%,#eef3f6_46%,#d9eef9_62%,#076c82_100%)] sm:h-[38rem] md:h-[42rem] lg:mt-0 lg:min-h-[100svh] lg:h-auto lg:rounded-l-[3rem]">
+        <div className={`${heroCopyRevealRightClass} -mt-3 relative h-[34rem] overflow-hidden rounded-none bg-[linear-gradient(180deg,#d7dce1_0%,#e8ecef_18%,#f4f6f8_34%,#eef3f6_46%,#d9eef9_62%,#076c82_100%)] sm:h-[38rem] md:h-[42rem] lg:mt-0 lg:min-h-[100svh] lg:h-auto lg:rounded-l-[3rem]`} style={{ animationDelay: "120ms" }}>
           <div className="relative h-full overflow-hidden">
             <Image
               src="/images/landing/hero-img.png"
@@ -120,7 +137,7 @@ export function HeroSection() {
               </div>
 
               <div
-                className="absolute right-4 bottom-[0.95rem] z-20 md:right-[8%] md:bottom-[0.95rem] md:[--hero-card-rotate:-3deg] md:hero-card-drop motion-reduce:animate-none"
+                className="absolute right-4 bottom-[0.95rem] z-20 md:left-[62%] md:right-auto md:bottom-[0.95rem] md:-translate-x-1/2 md:[--hero-card-rotate:-3deg] md:hero-card-drop motion-reduce:animate-none"
                 style={{ animationDelay: "0.28s", animationDuration: "2.1s" }}
               >
                 <span
@@ -144,7 +161,7 @@ export function HeroSection() {
               </div>
 
               <div
-                className="absolute right-[14%] bottom-[1.1rem] z-20 hidden md:block md:right-[52%] md:bottom-[1.1rem] md:translate-x-1/2 md:[--hero-card-rotate:-3deg] md:hero-card-drop motion-reduce:animate-none"
+                className="absolute right-[14%] bottom-[1.1rem] z-20 hidden md:block md:left-[44%] md:right-auto md:bottom-[1.1rem] md:-translate-x-1/2 md:[--hero-card-rotate:-3deg] md:hero-card-drop motion-reduce:animate-none"
                 style={{ animationDelay: "0.5s", animationDuration: "2.26s" }}
               >
                 <span
