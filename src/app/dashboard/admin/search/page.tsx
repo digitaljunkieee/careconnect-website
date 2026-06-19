@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,8 +10,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/pagination-controls";
 import { getAdminSearchData } from "@/lib/admin-platform";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  parsePage,
+  parsePageSize
+} from "@/lib/pagination";
 import { formatDateTime } from "@/lib/format";
 
 type SearchPageProps = {
@@ -41,7 +48,10 @@ export default async function AdminSearchPage({
 }: SearchPageProps) {
   const params = (await searchParams) ?? {};
   const page = parsePage(firstQueryValue(params.page));
-  const pageSize = parsePageSize(firstQueryValue(params.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(params.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const q = firstQueryValue(params.q);
   const entityType = firstQueryValue(params.entityType, "ALL") as
     | "ALL"
@@ -56,6 +66,13 @@ export default async function AdminSearchPage({
     q,
     entityType
   });
+
+  const query = {
+    q: q || undefined,
+    entityType: entityType || undefined,
+    pageSize: String(pageSize)
+  };
+  const paginationBasePath = "/dashboard/admin/search";
 
   return (
     <div className="space-y-6">
@@ -150,6 +167,23 @@ export default async function AdminSearchPage({
           )}
         </CardContent>
       </Card>
+
+      {data.rows.length ? (
+        <PaginationControls
+          nextHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.min(data.page + 1, data.pageCount)
+          )}
+          page={data.page}
+          pageCount={data.pageCount}
+          previousHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.max(data.page - 1, 1)
+          )}
+        />
+      ) : null}
     </div>
   );
 }

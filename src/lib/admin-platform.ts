@@ -13,10 +13,14 @@ import Shift from "@/models/Shift";
 import Application from "@/models/Application";
 import Assignment from "@/models/Assignment";
 import PaymentLog from "@/models/PaymentLog";
+import AuditLog from "@/models/AuditLog";
 import Notification from "@/models/Notification";
+import { NOTIFICATION_TYPES } from "@/lib/constants";
 import type {
   ApplicationStatus,
+  AuditAction,
   AuditEntityType,
+  NotificationRecipientRole,
   NotificationType,
   PaymentStatus,
   ShiftStatus,
@@ -126,14 +130,28 @@ type LeanPaymentLog = {
 
 type LeanNotification = {
   _id: unknown;
+  recipient?: unknown;
   userId?: unknown;
+  recipientRole?: NotificationRecipientRole;
   title?: string;
   message?: string;
   type?: NotificationType;
+  actionUrl?: string;
   isRead?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   user?: LeanUser | null;
+};
+
+type LeanAuditLog = {
+  _id: unknown;
+  adminId?: LeanUser | null;
+  action?: AuditAction;
+  entityType?: AuditEntityType;
+  entityId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export type AdminWorkerOption = {
@@ -145,8 +163,11 @@ export type AdminWorkerOption = {
 export type AdminShiftRow = {
   id: string;
   shiftId: string;
+  facilityId: string;
   facilityName: string;
   date: string;
+  hourlyRate: number;
+  hourlyRateLabel: string;
   roleRequired: string;
   status: ShiftStatus;
   assignedWorker: string;
@@ -156,6 +177,11 @@ export type AdminShiftRow = {
 export type AdminShiftListData = {
   rows: AdminShiftRow[];
   total: number;
+  summary: {
+    open: number;
+    filled: number;
+    closed: number;
+  };
   page: number;
   pageSize: number;
   pageCount: number;
@@ -197,8 +223,12 @@ export type AdminShiftDetailData = {
 
 export type AdminApplicationRow = {
   id: string;
+  workerProfileId: string;
+  shiftId: string;
+  facilityId: string;
   workerName: string;
   workerEmail: string;
+  verificationStatus: VerificationStatus;
   facilityName: string;
   shiftLabel: string;
   status: ApplicationStatus;
@@ -208,6 +238,11 @@ export type AdminApplicationRow = {
 export type AdminApplicationListData = {
   rows: AdminApplicationRow[];
   total: number;
+  summary: {
+    pending: number;
+    accepted: number;
+    rejected: number;
+  };
   page: number;
   pageSize: number;
   pageCount: number;
@@ -248,6 +283,37 @@ export type AdminNotificationListData = {
   rows: AdminNotificationRow[];
   total: number;
   unreadTotal: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
+export type AdminActivityRange = "today" | "7d" | "30d";
+
+export type AdminActivityLogRow = {
+  id: string;
+  action: AuditAction;
+  actionLabel: string;
+  entityType: AuditEntityType;
+  entityLabel: string;
+  entityId: string;
+  detail: string;
+  actorName: string;
+  createdAt: string;
+  href?: string;
+};
+
+export type AdminActivityLogData = {
+  range: AdminActivityRange;
+  summary: {
+    total: number;
+    verifications: number;
+    shifts: number;
+    applications: number;
+    payments: number;
+  };
+  rows: AdminActivityLogRow[];
+  total: number;
   page: number;
   pageSize: number;
   pageCount: number;
@@ -348,6 +414,12 @@ function normalizeName(user?: Pick<LeanUser, "firstName" | "lastName" | "email">
   return formatName(user?.firstName, user?.lastName) || user?.email || "";
 }
 
+function normalizeNotificationType(value?: string): NotificationType {
+  return NOTIFICATION_TYPES.includes(value as NotificationType)
+    ? (value as NotificationType)
+    : "system";
+}
+
 function normalizeSearch(value: string) {
   return value.trim().toLowerCase();
 }
@@ -362,6 +434,130 @@ function matchesSearch(values: Array<string | number | undefined>, search: strin
       .toLowerCase()
       .includes(search)
   );
+}
+
+function getActivityRangeWindow(range: AdminActivityRange) {
+  const end = new Date();
+  const start = new Date(end);
+
+  if (range === "today") {
+    start.setHours(0, 0, 0, 0);
+  } else if (range === "7d") {
+    start.setDate(start.getDate() - 7);
+  } else {
+    start.setDate(start.getDate() - 30);
+  }
+
+  return { start, end };
+}
+
+function getAuditActionLabel(action?: AuditAction) {
+  switch (action) {
+    case "VERIFICATION_SUBMITTED":
+      return "Verification submitted";
+    case "VERIFICATION_APPROVED":
+      return "Verification approved";
+    case "VERIFICATION_REJECTED":
+      return "Verification rejected";
+    case "APPLICATION_ACCEPTED":
+      return "Application accepted";
+    case "APPLICATION_REJECTED":
+      return "Application rejected";
+    case "APPLICATION_ASSIGNED":
+      return "Application assigned";
+    case "WORKER_ENABLED":
+      return "Worker enabled";
+    case "WORKER_DISABLED":
+      return "Worker disabled";
+    case "WORKER_DELETED":
+      return "Worker deleted";
+    case "FACILITY_ENABLED":
+      return "Facility enabled";
+    case "FACILITY_DISABLED":
+      return "Facility disabled";
+    case "FACILITY_DELETED":
+      return "Facility deleted";
+    case "SHIFT_CANCELLED":
+      return "Shift closed";
+    case "SHIFT_REASSIGNED":
+      return "Shift assigned";
+    case "SHIFT_DELETED":
+      return "Shift deleted";
+    case "PAYMENT_RECEIVED":
+      return "Payment received";
+    case "PAYMENT_FAILED":
+      return "Payment failed";
+    case "PAYMENT_REFUNDED":
+      return "Payment refunded";
+    case "EMAIL_QUEUED":
+      return "Email queued";
+    case "EMAIL_SENT":
+      return "Email sent";
+    case "EMAIL_FAILED":
+      return "Email failed";
+    case "WEBHOOK_RECEIVED":
+      return "Webhook received";
+    case "WEBHOOK_PROCESSED":
+      return "Webhook processed";
+    case "NOTIFICATION_MARKED_READ":
+      return "Notification read";
+    case "NOTIFICATION_MARKED_ALL_READ":
+      return "All notifications read";
+    case "NOTIFICATION_DELETED":
+      return "Notification deleted";
+    case "SETTINGS_UPDATED":
+      return "Settings updated";
+    default:
+      return "Activity";
+  }
+}
+
+function getAuditEntityLabel(entityType?: AuditEntityType) {
+  switch (entityType) {
+    case "WORKER":
+      return "Worker";
+    case "FACILITY":
+      return "Facility";
+    case "SHIFT":
+      return "Shift";
+    case "APPLICATION":
+      return "Application";
+    case "PAYMENT":
+      return "Payment";
+    case "EMAIL":
+      return "Email";
+    case "NOTIFICATION":
+      return "Notification";
+    case "VERIFICATION":
+      return "Verification";
+    case "SETTING":
+      return "Setting";
+    case "WEBHOOK":
+      return "Webhook";
+    default:
+      return "Record";
+  }
+}
+
+function getAuditHref(entry: LeanAuditLog) {
+  const entityId = String(entry.entityId ?? "");
+
+  switch (entry.entityType) {
+    case "WORKER":
+      return entityId ? `/dashboard/admin/workers/${entityId}` : undefined;
+    case "FACILITY":
+      return entityId ? `/dashboard/admin/facilities/${entityId}` : undefined;
+    case "SHIFT":
+      return entityId ? `/dashboard/admin/shifts/${entityId}` : undefined;
+    case "APPLICATION":
+      return "/dashboard/admin/applications";
+    case "VERIFICATION":
+      return entityId ? `/dashboard/admin/verifications` : undefined;
+    case "NOTIFICATION":
+      return "/dashboard/admin/notifications";
+    default:
+      return undefined;
+  }
 }
 
 function paginate<T>(items: T[], page: number, pageSize: number) {
@@ -433,7 +629,7 @@ async function getWorkerOptions(limit = 50): Promise<AdminWorkerOption[]> {
 }
 
 function toShiftLabel(shift?: LeanShift | null) {
-  return `${shift?.roleRequired ?? "Shift"} • ${shift?.date ? formatDate(shift.date) : "TBA"}`;
+  return `${shift?.roleRequired ?? "Shift"} - ${shift?.date ? formatDate(shift.date) : "TBA"}`;
 }
 
 export async function getAdminAssignableWorkers(limit = 50) {
@@ -503,8 +699,11 @@ export async function getAdminShiftListData(filters: {
       return {
         id: String(shift._id),
         shiftId: String(shift._id),
+        facilityId: String(facility?._id ?? shift.facilityId ?? ""),
         facilityName: facility?.companyName ?? "Unknown facility",
         date: shift.date ? toIso(shift.date) : new Date().toISOString(),
+        hourlyRate: shift.hourlyRate ?? 0,
+        hourlyRateLabel: formatCurrency(shift.hourlyRate ?? 0),
         roleRequired: shift.roleRequired ?? "",
         status: shift.status ?? "OPEN",
         assignedWorker: normalizeName(workerUser) || "Unassigned",
@@ -535,11 +734,18 @@ export async function getAdminShiftListData(filters: {
     })
     .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
 
+  const summary = {
+    open: filtered.filter((row) => row.status === "OPEN").length,
+    filled: filtered.filter((row) => row.status === "FILLED").length,
+    closed: filtered.filter((row) => row.status === "CLOSED").length
+  };
+
   const { rows, total, pageCount } = paginate(filtered, filters.page, filters.pageSize);
 
   return {
     rows: rows.map(stripSortDate),
     total,
+    summary,
     page: filters.page,
     pageSize: filters.pageSize,
     pageCount,
@@ -687,10 +893,14 @@ export async function getAdminApplicationListData(filters: {
 
       return {
         id: String(application._id),
+        workerProfileId: String(workerProfile?._id ?? application.workerId ?? ""),
+        shiftId: String(shift?._id ?? application.shiftId ?? ""),
+        facilityId: String(facility?._id ?? shift?.facilityId ?? ""),
         workerName: normalizeName(workerUser),
         workerEmail: workerUser?.email ?? "",
+        verificationStatus: workerProfile?.verificationStatus ?? "PENDING",
         facilityName: facility?.companyName ?? "Unknown facility",
-        shiftLabel: `${shift?.roleRequired ?? "Shift"} • ${shift?.date ? formatDate(shift.date) : "TBA"}`,
+        shiftLabel: `${shift?.roleRequired ?? "Shift"} - ${shift?.date ? formatDate(shift.date) : "TBA"}`,
         status: application.status ?? "PENDING",
         submittedAt: toIso(application.createdAt),
         sortDate: application.createdAt ?? new Date(0)
@@ -712,11 +922,18 @@ export async function getAdminApplicationListData(filters: {
     })
     .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
 
+  const summary = {
+    pending: filtered.filter((row) => row.status === "PENDING").length,
+    accepted: filtered.filter((row) => row.status === "ACCEPTED").length,
+    rejected: filtered.filter((row) => row.status === "REJECTED").length
+  };
+
   const { rows, total, pageCount } = paginate(filtered, filters.page, filters.pageSize);
 
   return {
     rows: rows.map(stripSortDate),
     total,
+    summary,
     page: filters.page,
     pageSize: filters.pageSize,
     pageCount
@@ -766,7 +983,7 @@ export async function getAdminPaymentListData(filters: {
         id: String(payment._id),
         stripeSessionId: payment.stripeSessionId ?? "",
         facilityName: facility?.companyName ?? "Unknown facility",
-        shiftLabel: `${shift?.roleRequired ?? "Shift"} • ${shift?.date ? formatDate(shift.date) : "TBA"}`,
+        shiftLabel: `${shift?.roleRequired ?? "Shift"} - ${shift?.date ? formatDate(shift.date) : "TBA"}`,
         amount: payment.amount ?? 0,
         amountLabel: formatCurrency(payment.amount ?? 0, payment.currency ?? "GBP"),
         currency: payment.currency ?? "GBP",
@@ -828,27 +1045,33 @@ export async function getAdminNotificationListData(filters: {
   const [notifications] = await Promise.all([
     Notification.find()
       .populate({
+        path: "recipient",
+        select: "firstName lastName email"
+      })
+      .populate({
         path: "userId",
         select: "firstName lastName email"
       })
       .sort({ createdAt: -1 })
       .lean()
   ]) as unknown as [
-    Array<LeanNotification & { userId?: LeanUser }>
+    Array<LeanNotification & { recipient?: LeanUser; userId?: LeanUser }>
   ];
 
   const search = normalizeSearch(filters.search);
 
   const mapped = notifications
     .map((notification) => {
-      const user = notification.userId as LeanUser | undefined;
+      const user =
+        (notification.recipient as LeanUser | undefined) ??
+        (notification.userId as LeanUser | undefined);
 
       return {
         id: String(notification._id),
         title: notification.title ?? "",
         userName: normalizeName(user),
         userEmail: user?.email ?? "",
-        type: notification.type ?? "INFO",
+        type: normalizeNotificationType(notification.type),
         message: notification.message ?? "",
         isRead: Boolean(notification.isRead),
         createdAt: toIso(notification.createdAt),
@@ -886,6 +1109,155 @@ export async function getAdminNotificationListData(filters: {
     rows: rows.map(stripSortDate),
     total,
     unreadTotal,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    pageCount
+  };
+}
+
+export async function getAdminActivityLogData(filters: {
+  page: number;
+  pageSize: number;
+  range: AdminActivityRange;
+}): Promise<AdminActivityLogData> {
+  await connectDB();
+
+  const { start, end } = getActivityRangeWindow(filters.range);
+
+  const [entries] = await Promise.all([
+    AuditLog.find({
+      createdAt: {
+        $gte: start,
+        $lte: end
+      }
+    })
+      .populate({
+        path: "adminId",
+        select: "firstName lastName email"
+      })
+      .sort({ createdAt: -1 })
+      .lean()
+  ]) as unknown as [Array<LeanAuditLog>];
+
+  const mapped = entries.map((entry) => {
+    const admin = entry.adminId as LeanUser | undefined;
+    const action = entry.action ?? "SETTINGS_UPDATED";
+    const actionLabel = getAuditActionLabel(action);
+    const entityLabel = getAuditEntityLabel(entry.entityType);
+    const actorName = normalizeName(admin) || admin?.email || "System";
+    const metadata = entry.metadata ?? {};
+    const notes = [
+      typeof metadata.notes === "string" ? metadata.notes.trim() : "",
+      typeof metadata.adminNotes === "string" ? metadata.adminNotes.trim() : "",
+      typeof metadata.section === "string" ? metadata.section.trim() : ""
+    ].filter(Boolean);
+
+    let detail = `${entityLabel} activity recorded.`;
+
+    switch (action) {
+      case "VERIFICATION_SUBMITTED":
+        detail = "Verification submitted and queued for review.";
+        break;
+      case "VERIFICATION_APPROVED":
+        detail = "Verification approved for the worker.";
+        break;
+      case "VERIFICATION_REJECTED":
+        detail = "Verification rejected after admin review.";
+        break;
+      case "APPLICATION_ACCEPTED":
+        detail = "Application was accepted.";
+        break;
+      case "APPLICATION_REJECTED":
+        detail = "Application was rejected.";
+        break;
+      case "APPLICATION_ASSIGNED":
+        detail = "Application was matched to an open shift.";
+        break;
+      case "WORKER_ENABLED":
+        detail = "Worker account reactivated.";
+        break;
+      case "WORKER_DISABLED":
+        detail = "Worker account paused.";
+        break;
+      case "WORKER_DELETED":
+        detail = "Worker account removed from the platform.";
+        break;
+      case "FACILITY_ENABLED":
+        detail = "Facility account reactivated.";
+        break;
+      case "FACILITY_DISABLED":
+        detail = "Facility account paused.";
+        break;
+      case "FACILITY_DELETED":
+        detail = "Facility account removed from the platform.";
+        break;
+      case "SHIFT_CANCELLED":
+        detail = "Shift closed and related activity updated.";
+        break;
+      case "SHIFT_REASSIGNED":
+        detail = "Shift assigned to a verified worker.";
+        break;
+      case "SHIFT_DELETED":
+        detail = "Shift removed from the schedule.";
+        break;
+      case "PAYMENT_RECEIVED":
+        detail = "Payment was recorded for a shift.";
+        break;
+      case "PAYMENT_FAILED":
+        detail = "A payment attempt failed.";
+        break;
+      case "PAYMENT_REFUNDED":
+        detail = "A payment refund was completed.";
+        break;
+      case "NOTIFICATION_MARKED_READ":
+        detail = "Notification marked as read.";
+        break;
+      case "NOTIFICATION_MARKED_ALL_READ":
+        detail = "All notifications were marked as read.";
+        break;
+      case "NOTIFICATION_DELETED":
+        detail = "Notification removed from the queue.";
+        break;
+      case "SETTINGS_UPDATED":
+        detail = "Admin settings were updated.";
+        break;
+      default:
+        break;
+    }
+
+    if (notes.length) {
+      detail = `${detail} ${notes.join(" - ")}`.trim();
+    }
+
+    return {
+      id: String(entry._id),
+      action,
+      actionLabel,
+      entityType: entry.entityType ?? "SETTING",
+      entityLabel,
+      entityId: String(entry.entityId ?? ""),
+      detail,
+      actorName,
+      createdAt: toIso(entry.createdAt),
+      href: getAuditHref(entry)
+    };
+  });
+
+  const summary = {
+    total: mapped.length,
+    verifications: mapped.filter((row) => row.entityType === "VERIFICATION").length,
+    shifts: mapped.filter((row) => row.entityType === "SHIFT").length,
+    applications: mapped.filter((row) => row.entityType === "APPLICATION").length,
+    payments: mapped.filter((row) => row.entityType === "PAYMENT").length
+  };
+
+  const { rows, total, pageCount } = paginate(mapped, filters.page, filters.pageSize);
+
+  return {
+    range: filters.range,
+    summary,
+    rows,
+    total,
     page: filters.page,
     pageSize: filters.pageSize,
     pageCount
@@ -1301,7 +1673,7 @@ export async function getAdminSearchData(filters: {
           id: workerId,
           entityType: "WORKER",
           title: normalizeName(user),
-          subtitle: `${user?.email ?? ""} • ${status}`,
+          subtitle: `${user?.email ?? ""} - ${status}`,
           status,
           createdAt: toIso(profile.createdAt),
           href: `/dashboard/admin/workers/${workerId}`
@@ -1321,7 +1693,7 @@ export async function getAdminSearchData(filters: {
           id: facilityId,
           entityType: "FACILITY",
           title,
-          subtitle: `${normalizeName(user)} • ${user?.email ?? ""}`,
+          subtitle: `${normalizeName(user)} - ${user?.email ?? ""}`,
           status,
           createdAt: toIso(profile.createdAt),
           href: `/dashboard/admin/facilities/${facilityId}`
@@ -1337,7 +1709,7 @@ export async function getAdminSearchData(filters: {
         rows.push({
           id: String(shift._id),
           entityType: "SHIFT",
-          title: `${facility?.companyName ?? "Facility"} • ${shift.roleRequired ?? "Shift"}`,
+          title: `${facility?.companyName ?? "Facility"} - ${shift.roleRequired ?? "Shift"}`,
           subtitle: toShiftLabel(shift),
           status: shift.status ?? "OPEN",
           createdAt: toIso(shift.createdAt),
@@ -1364,7 +1736,7 @@ export async function getAdminSearchData(filters: {
           id: String(application._id),
           entityType: "APPLICATION",
           title: normalizeName(workerUser) || "Application",
-          subtitle: `${facility?.companyName ?? "Unknown facility"} • ${toShiftLabel(shift)}`,
+          subtitle: `${facility?.companyName ?? "Unknown facility"} - ${toShiftLabel(shift)}`,
           status: application.status ?? "PENDING",
           createdAt: toIso(application.createdAt),
           href: `/dashboard/admin/shifts/${String(shift?._id ?? "")}`

@@ -17,7 +17,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,9 +30,11 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetTitle,
   SheetTrigger
 } from "@/components/ui/sheet";
 import { BrandMark, BrandGlyph } from "@/components/layout/brand-mark";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { useDashboardTheme } from "@/components/providers/dashboard-theme-provider";
 import { DASHBOARD_NAVIGATION, type DashboardNavItem } from "@/lib/navigation";
 import { ROLE_LABELS, type Role } from "@/lib/constants";
@@ -84,8 +91,123 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
     .map((part) => part[0]?.toUpperCase())
     .join("");
   const userEmail = session?.user?.email ?? "CareConnect account";
+  const normalizedPathname = normalizePath(pathname ?? "");
+  const isNotificationsPage =
+    normalizedPathname === "/dashboard/notifications" ||
+    normalizedPathname === "/dashboard/admin/notifications";
   const currentPageLabel =
-    navItems.find((item) => isActivePath(pathname, item))?.label ?? ROLE_LABELS[role];
+    isNotificationsPage
+      ? "Notifications"
+      : role === "FACILITY" && normalizedPathname === "/dashboard/facility"
+      ? "Facility dashboard"
+      : navItems.find((item) => isActivePath(pathname, item))?.label ?? ROLE_LABELS[role];
+  const profileHref =
+    role === "ADMIN"
+      ? "/dashboard/admin/profile"
+      : role === "FACILITY"
+        ? "/dashboard/facility/profile"
+        : "/dashboard/worker/profile";
+  const accountSettingsHref =
+    role === "ADMIN"
+      ? "/dashboard/admin/settings"
+      : role === "FACILITY"
+      ? "/dashboard/facility/profile/edit"
+      : "/dashboard/worker/settings";
+  const supportHref = "mailto:support@careconnect.co.uk?subject=CareConnect%20Support";
+  const isDarkDashboard = theme === "dark";
+  const dropdownContentClassName = cn(
+    "w-[min(300px,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-y-auto overscroll-contain !rounded-[24px] !p-2",
+    isDarkDashboard
+      ? "!border !border-[rgba(255,255,255,0.08)] !bg-[#101D31] text-white !shadow-[0_24px_60px_rgba(2,6,23,0.32)]"
+      : "!border !border-border/70 !bg-background text-foreground !shadow-[0_24px_60px_rgba(15,23,42,0.12)]"
+  );
+  const dropdownLabelClassName = cn(
+    "!p-0 !font-normal !normal-case !tracking-normal",
+    isDarkDashboard ? "!text-white" : "!text-foreground"
+  );
+  const dropdownLabelPanelClassName = cn(
+    "flex items-center gap-3 rounded-[20px] px-3 py-3",
+    isDarkDashboard ? "bg-transparent" : "bg-muted/30"
+  );
+  const dropdownAvatarClassName = cn(
+    "h-10 w-10 shrink-0 rounded-full",
+    isDarkDashboard
+      ? "border border-[rgba(255,255,255,0.08)] bg-[#15243A]"
+      : "border border-border/70 bg-background"
+  );
+  const dropdownAvatarFallbackClassName = cn(
+    "rounded-full",
+    isDarkDashboard ? "bg-[#13d9cb]/10 text-[#13d9cb]" : "bg-primary/10 text-primary"
+  );
+  const dropdownUserNameClassName = cn(
+    "text-sm font-semibold leading-5",
+    isDarkDashboard ? "text-white" : "text-foreground"
+  );
+  const dropdownUserEmailClassName = cn(
+    "text-xs leading-5",
+    isDarkDashboard ? "text-white/65" : "text-muted-foreground"
+  );
+  const dropdownSeparatorClassName = cn(
+    "!my-2",
+    isDarkDashboard ? "!bg-[rgba(255,255,255,0.08)]" : "!bg-border/70"
+  );
+  const dropdownItemClassName = cn(
+    "cursor-pointer !rounded-2xl !px-3 !py-2.5 text-sm !font-medium transition-colors",
+    isDarkDashboard
+      ? "text-white/90 hover:!bg-[rgba(19,217,203,0.08)] hover:!text-white data-[highlighted]:!bg-[rgba(19,217,203,0.08)] data-[highlighted]:!text-white"
+      : "text-foreground/80 hover:!bg-accent hover:!text-foreground data-[highlighted]:!bg-accent data-[highlighted]:!text-foreground"
+  );
+  const dropdownDangerItemClassName = cn(
+    "cursor-pointer !rounded-2xl !px-3 !py-2.5 text-sm !font-medium transition-colors",
+    isDarkDashboard
+      ? "text-white/80 hover:!bg-[rgba(255,84,84,0.08)] hover:!text-red-300 data-[highlighted]:!bg-[rgba(255,84,84,0.08)] data-[highlighted]:!text-red-300"
+      : "text-red-500 hover:!bg-red-500/10 hover:!text-red-600 data-[highlighted]:!bg-red-500/10 data-[highlighted]:!text-red-600"
+  );
+  const dropdownSubTriggerClassName = cn(
+    "cursor-pointer !rounded-2xl !px-3 !py-2.5 text-sm !font-medium transition-colors",
+    isDarkDashboard
+      ? "text-white/90 hover:!bg-[rgba(19,217,203,0.08)] hover:!text-white data-[highlighted]:!bg-[rgba(19,217,203,0.08)] data-[highlighted]:!text-white"
+      : "text-foreground/80 hover:!bg-accent hover:!text-foreground data-[highlighted]:!bg-accent data-[highlighted]:!text-foreground"
+  );
+  const dropdownSubContentClassName = cn(
+    "w-[min(200px,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-y-auto overscroll-contain !rounded-[20px] !p-2",
+    isDarkDashboard
+      ? "!border !border-[rgba(255,255,255,0.08)] !bg-[#101D31] text-white !shadow-[0_24px_60px_rgba(2,6,23,0.32)]"
+      : "!border !border-border/70 !bg-background text-foreground !shadow-[0_24px_60px_rgba(15,23,42,0.12)]"
+  );
+  const dropdownRadioItemClassName = cn(
+    "cursor-pointer !rounded-xl !pl-8 !pr-3 !py-2.5 text-sm transition-colors",
+    isDarkDashboard
+      ? "text-white/85 hover:!bg-[rgba(19,217,203,0.08)] hover:!text-white data-[highlighted]:!bg-[rgba(19,217,203,0.08)] data-[highlighted]:!text-white data-[state=checked]:!bg-[rgba(19,217,203,0.08)] data-[state=checked]:!text-white"
+      : "text-foreground/80 hover:!bg-accent hover:!text-foreground data-[highlighted]:!bg-accent data-[highlighted]:!text-foreground data-[state=checked]:!bg-primary/10 data-[state=checked]:!text-primary"
+  );
+  const headerIconButtonClassName = cn(
+    "rounded-full shadow-sm transition-colors",
+    isDarkDashboard
+      ? "border border-border/60 bg-background/70 hover:bg-background/85"
+      : "border border-border/70 bg-background/95 hover:bg-accent/70"
+  );
+  const headerMenuButtonClassName = cn(
+    "rounded-2xl transition-colors",
+    isDarkDashboard
+      ? "border border-border/60 bg-background/70 text-foreground shadow-sm hover:bg-background/85"
+      : "border border-border/70 bg-background/95 text-foreground shadow-sm hover:bg-accent/70"
+  );
+  const headerThemeStripClassName = cn(
+    "flex items-center rounded-full p-1 shadow-sm",
+    isDarkDashboard
+      ? "border border-border/70 bg-background/70"
+      : "border border-border/70 bg-background/95"
+  );
+  const headerThemeButtonClassName = (active: boolean) =>
+    cn(
+      "h-9 w-9 rounded-full",
+      active
+        ? "bg-primary/10 text-primary hover:bg-primary/10"
+        : isDarkDashboard
+          ? "text-muted-foreground hover:bg-accent hover:text-foreground"
+          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+    );
 
   React.useEffect(() => {
     const storedValue = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
@@ -151,30 +273,60 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
   function SidebarContent({
     compact = false,
     closeOnNavigate = false,
+    showBrand = true,
   }: {
     compact?: boolean;
     closeOnNavigate?: boolean;
+    showBrand?: boolean;
   }) {
+    const sidebarFooterClassName = cn(
+      "mt-auto border-t",
+      isDarkDashboard ? "border-border/60" : "border-border/70 bg-background/55 backdrop-blur-sm"
+    );
+    const sidebarIdentityClassName = cn(
+      "flex items-center gap-3 rounded-2xl p-3",
+      isDarkDashboard
+        ? "bg-muted/45"
+        : "border border-border/70 bg-background/85 shadow-sm",
+      compact && "justify-center p-2"
+    );
+    const sidebarLogoutButtonClassName = cn(
+      compact
+        ? "h-10 w-10 rounded-full border"
+        : "h-11 w-full justify-start rounded-2xl border px-4",
+      isDarkDashboard
+        ? "border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+        : "border-red-500/20 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+    );
+
     return (
       <div className="relative flex h-full flex-col">
-        <div
+        {showBrand ? (
+          <div
+            className={cn(
+              "flex items-center gap-3 px-4 pt-3",
+              compact && "px-3 pt-3"
+            )}
+          >
+            {compact ? (
+              <BrandGlyph className="h-10 w-10 border-0 bg-transparent shadow-none" />
+            ) : (
+              <BrandMark
+                compact
+                className="max-w-full"
+                glyphClassName="border-0 bg-transparent shadow-none"
+              />
+            )}
+          </div>
+        ) : null}
+
+        <nav
           className={cn(
-            "flex items-center gap-3 px-4 pt-3",
-            compact && "px-3 pt-3"
+            showBrand ? "mt-4" : "mt-2",
+            "flex-1",
+            compact ? "space-y-1 px-2" : "space-y-1 px-3"
           )}
         >
-          {compact ? (
-            <BrandGlyph className="h-10 w-10 border-0 bg-transparent shadow-none" />
-          ) : (
-            <BrandMark
-              compact
-              className="max-w-full"
-              glyphClassName="border-0 bg-transparent shadow-none"
-            />
-          )}
-        </div>
-
-        <nav className={cn("mt-6 flex-1", compact ? "space-y-1 px-2" : "space-y-1 px-3")}>
           {mobileNavItems.map((item) => (
             <NavItemLink
               key={item.id}
@@ -186,32 +338,24 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
 
         </nav>
 
-        <div className={cn("mt-auto border-t border-border/60", compact ? "px-2 py-3" : "px-4 py-4")}>
+        <div className={cn(sidebarFooterClassName, compact ? "px-2 py-3" : "px-4 py-4")}>
           {role === "FACILITY" ? (
             <Button
               type="button"
               variant="ghost"
               size={compact ? "icon" : "default"}
-              className={cn(
-                compact
-                  ? "h-10 w-10 rounded-full border border-white/8 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
-                  : "h-11 w-full justify-start rounded-2xl border border-white/8 bg-white/5 px-4 text-white/80 hover:bg-white/10 hover:text-white"
-              )}
-              aria-label="Sign out"
+              className={sidebarLogoutButtonClassName}
+              aria-label="Logout"
+              title={compact ? "Logout" : undefined}
               onClick={() => {
                 void signOut({ callbackUrl: "/login" });
               }}
             >
               <LogOut className={cn("h-4 w-4", compact ? "" : "mr-2")} />
-              {!compact ? <span>Sign out</span> : null}
+              {!compact ? <span>Logout</span> : null}
             </Button>
           ) : (
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-2xl bg-muted/45 p-3",
-                compact && "justify-center p-2"
-              )}
-            >
+            <div className={sidebarIdentityClassName}>
               <Avatar className="h-10 w-10 shrink-0 rounded-full">
                 {session?.user?.image ? (
                   <AvatarImage src={session.user.image} alt={userName} />
@@ -254,7 +398,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-2xl lg:hidden"
+                      className={cn("h-10 w-10 lg:hidden", headerMenuButtonClassName)}
                       aria-label="Open navigation"
                     >
                       <Menu className="h-4 w-4" />
@@ -264,6 +408,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     side="left"
                     className="w-[min(20rem,calc(100vw-1rem))] rounded-r-3xl"
                   >
+                    <SheetTitle className="sr-only">Dashboard navigation</SheetTitle>
                     <div className="px-1 pt-2">
                       <BrandMark
                         compact
@@ -271,8 +416,8 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                         glyphClassName="border-0 bg-transparent shadow-none"
                       />
                     </div>
-                    <div className="mt-5">
-                      <SidebarContent closeOnNavigate />
+                    <div className="flex flex-1 min-h-0 flex-col">
+                      <SidebarContent closeOnNavigate showBrand={false} />
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -280,7 +425,10 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="hidden h-10 w-10 shrink-0 rounded-full border border-border/70 bg-background/80 shadow-sm transition-transform hover:scale-105 lg:inline-flex"
+                  className={cn(
+                    "hidden h-10 w-10 shrink-0 transition-transform hover:scale-105 lg:inline-flex",
+                    headerIconButtonClassName
+                  )}
                   aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                   aria-pressed={isSidebarCollapsed}
                   onClick={() => setIsSidebarCollapsed((value) => !value)}
@@ -293,28 +441,25 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
               </div>
 
               <div className="flex items-center gap-2">
+                <NotificationBell />
+
                 <Button
                   asChild
                   variant="ghost"
                   size="icon"
-                  className="rounded-full border border-border/60 bg-background/70 shadow-sm"
+                  className={cn("h-11 w-11", headerIconButtonClassName)}
                 >
                   <Link aria-label="Search dashboard" href={dashboardSearchHref}>
                     <Search className="h-4 w-4" />
                   </Link>
                 </Button>
 
-                <div className="flex items-center rounded-full border border-border/70 bg-background/70 p-1 shadow-sm">
+                <div className={headerThemeStripClassName}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className={cn(
-                      "h-9 w-9 rounded-full",
-                      theme === "light"
-                        ? "bg-primary/10 text-primary hover:bg-primary/10"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    )}
+                    className={headerThemeButtonClassName(theme === "light")}
                     aria-label="Switch dashboard to light mode"
                     aria-pressed={theme === "light"}
                     onClick={() => setTheme("light")}
@@ -325,12 +470,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className={cn(
-                      "h-9 w-9 rounded-full",
-                      theme === "dark"
-                        ? "bg-primary/10 text-primary hover:bg-primary/10"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    )}
+                    className={headerThemeButtonClassName(theme === "dark")}
                     aria-label="Switch dashboard to dark mode"
                     aria-pressed={theme === "dark"}
                     onClick={() => setTheme("dark")}
@@ -344,7 +484,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 rounded-full border-border/70 bg-background/80 p-0 shadow-sm"
+                      className={cn("h-11 w-11 p-0", headerMenuButtonClassName)}
                       aria-label="Open account menu"
                     >
                       <Avatar className="h-11 w-11 rounded-full">
@@ -357,37 +497,78 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <DropdownMenuLabel>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
+                  <DropdownMenuContent
+                    align="end"
+                    collisionPadding={12}
+                    sideOffset={8}
+                    className={dropdownContentClassName}
+                  >
+                    <DropdownMenuLabel className={dropdownLabelClassName}>
+                      <div className={dropdownLabelPanelClassName}>
+                        <Avatar className={dropdownAvatarClassName}>
                           {session?.user?.image ? (
                             <AvatarImage src={session.user.image} alt={userName} />
                           ) : null}
-                          <AvatarFallback className="rounded-xl bg-primary/10 text-primary">
+                          <AvatarFallback className={dropdownAvatarFallbackClassName}>
                             {initials || "CC"}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{userName}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {session?.user?.email ?? "CareConnect account"}
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                            {ROLE_LABELS[role]}
-                          </p>
+                        <div className="min-w-0 flex-1">
+                          <p className={dropdownUserNameClassName}>{userName}</p>
+                          <p className={dropdownUserEmailClassName}>{userEmail}</p>
                         </div>
                       </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+
+                    <DropdownMenuSeparator className={dropdownSeparatorClassName} />
+
+                    <DropdownMenuItem asChild className={dropdownItemClassName}>
+                      <Link href={profileHref}>Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className={dropdownItemClassName}>
+                      <Link href={accountSettingsHref}>Account Settings</Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className={dropdownSubTriggerClassName}>
+                        Theme
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent collisionPadding={8} className={dropdownSubContentClassName}>
+                        <DropdownMenuRadioGroup
+                          value={theme}
+                          onValueChange={(value) => {
+                            setTheme(value as typeof theme);
+                          }}
+                        >
+                          <DropdownMenuRadioItem
+                            className={dropdownRadioItemClassName}
+                            value="light"
+                          >
+                            Light
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem
+                            className={dropdownRadioItemClassName}
+                            value="dark"
+                          >
+                            Dark
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                    <DropdownMenuItem asChild className={dropdownItemClassName}>
+                      <a href={supportHref}>Help &amp; Support</a>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator className={dropdownSeparatorClassName} />
+
                     <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => {
+                      className={dropdownDangerItemClassName}
+                      onSelect={() => {
                         void signOut({ callbackUrl: "/login" });
                       }}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
+                      Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

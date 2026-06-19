@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -43,7 +42,7 @@ type FacilityProfileFormProps = {
 type FacilityProfileFormValues = z.input<typeof facilityProfileSchema>;
 
 const fieldClassName =
-  "border-white/8 bg-[#15243A] text-white placeholder:text-white/35 shadow-none focus-visible:border-[#2bb9ff] focus-visible:ring-2 focus-visible:ring-[#2bb9ff]/45 focus-visible:ring-offset-0";
+  "border-border/70 bg-background/80 text-foreground placeholder:text-muted-foreground shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0";
 
 export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps) {
   const router = useRouter();
@@ -92,13 +91,13 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
   return (
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
             name="companyName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-white/80">
+                <FormLabel className="text-sm font-medium text-foreground">
                   Company Name
                 </FormLabel>
                 <FormControl>
@@ -114,13 +113,10 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
             name="website"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-white/80">Website</FormLabel>
+                <FormLabel className="text-sm font-medium text-foreground">Website</FormLabel>
                 <FormControl>
                   <Input className={fieldClassName} placeholder="careconnect.co.uk" {...field} />
                 </FormControl>
-                <FormDescription className="text-xs text-white/45">
-                  Keep it short and current.
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -132,11 +128,11 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
           name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium text-white/80">Address</FormLabel>
+              <FormLabel className="text-sm font-medium text-foreground">Address</FormLabel>
               <FormControl>
                 <Textarea
                   className={fieldClassName}
-                  placeholder="Company address"
+                  placeholder="Enter company address"
                   rows={4}
                   {...field}
                 />
@@ -146,13 +142,13 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
           )}
         />
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
             name="contactNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-white/80">
+                <FormLabel className="text-sm font-medium text-foreground">
                   Contact Number
                 </FormLabel>
                 <FormControl>
@@ -168,7 +164,7 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
             name="facilityType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-white/80">
+                <FormLabel className="text-sm font-medium text-foreground">
                   Facility Type
                 </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
@@ -177,11 +173,11 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
                       <SelectValue placeholder="Choose facility type" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="border-white/8 bg-[#101D31] text-white shadow-[0_24px_60px_rgba(4,14,38,0.45)]">
+                  <SelectContent className="border-border/70 bg-popover text-popover-foreground shadow-lg">
                     {FACILITY_TYPE_OPTIONS.map((option) => (
                       <SelectItem
                         key={option}
-                        className="focus:bg-white/5 focus:text-white"
+                        className="focus:bg-accent focus:text-accent-foreground"
                         value={option}
                       >
                         {option}
@@ -200,11 +196,11 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium text-white/80">Description</FormLabel>
+              <FormLabel className="text-sm font-medium text-foreground">Description</FormLabel>
               <FormControl>
                 <Textarea
                   className={fieldClassName}
-                  placeholder="Describe your setting, services, and what makes your facility stand out."
+                  placeholder="Tell workers about your facility, services, and shift environment."
                   rows={5}
                   {...field}
                 />
@@ -216,7 +212,7 @@ export function FacilityProfileForm({ initialValues }: FacilityProfileFormProps)
 
         <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
           <Button
-            className="h-12 rounded-2xl bg-[#076c82] px-6 text-white shadow-[0_18px_40px_rgba(7,108,130,0.35)] transition hover:bg-[#13d9cb] hover:text-[#040e26]"
+            className="h-12 rounded-2xl px-6 shadow-none hover:translate-y-0"
             disabled={isSaving}
             type="submit"
           >

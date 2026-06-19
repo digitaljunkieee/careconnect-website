@@ -1,24 +1,88 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowUpRight,
-  ShieldCheck,
-  ClipboardList,
-  CalendarDays,
-  UserRound
-} from "lucide-react";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ASSIGNMENT_STATUS_LABELS, VERIFICATION_STATUS_LABELS } from "@/lib/constants";
+import { formatDate } from "@/lib/format";
 import { getWorkerDashboardData } from "@/lib/worker-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
+import { cn } from "@/lib/utils";
+
+function DashboardMetric({
+  label,
+  value,
+  accent = false
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-[96px] flex-col justify-between rounded-2xl border border-border/50 bg-card/85 px-4 py-3 shadow-sm",
+        accent && "border-[#13d9cb]/20 bg-[#13d9cb]/5"
+      )}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="text-[1.55rem] font-semibold tracking-tight text-foreground">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SectionEmpty({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border/70 bg-background/40 px-5 py-8 text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
+function StatusBlock({
+  label,
+  children
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/55 p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+const APPLICATION_STATUS_VARIANTS: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline" | "soft"
+> = {
+  PENDING: "outline",
+  ACCEPTED: "soft",
+  REJECTED: "destructive",
+  CANCELLED: "secondary"
+};
+
+function getAvailabilityStatus(
+  isVerified: boolean,
+  upcomingAssignmentsCount: number
+): { label: string; variant: "soft" | "outline" | "secondary" } {
+  if (!isVerified) {
+    return { label: "Verification required", variant: "outline" };
+  }
+
+  if (upcomingAssignmentsCount > 0) {
+    return { label: "Scheduled", variant: "secondary" };
+  }
+
+  return { label: "Open to shifts", variant: "soft" };
+}
 
 export default async function WorkerDashboardPage() {
   const user = await requireSessionUser(["WORKER"]);
@@ -34,18 +98,11 @@ export default async function WorkerDashboardPage() {
       <Card className="border-border/70">
         <CardHeader>
           <CardTitle>Complete your worker profile</CardTitle>
-          <CardDescription>
-            Add your details so you can browse shifts, complete verification,
-            and track applications in one place.
-          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row">
-          <Button asChild className="rounded-2xl">
-            <Link href="/dashboard/worker/profile">Complete profile</Link>
-          </Button>
-          <Button asChild className="rounded-2xl" variant="outline">
-            <Link href="/dashboard/worker/verification">Review verification</Link>
-          </Button>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Finish your worker profile to start tracking shifts and applications.
+          </p>
         </CardContent>
       </Card>
     );
@@ -59,169 +116,209 @@ export default async function WorkerDashboardPage() {
         : data.verificationStatus === "REJECTED"
           ? "destructive"
           : "secondary";
-  const canApply = data.verificationStatus === "VERIFIED" && data.isVerified;
-  const primaryHref = canApply ? "/dashboard/worker/shifts" : "/dashboard/worker/verification";
-  const primaryLabel = canApply ? "Browse shifts" : "Complete verification";
-
-  const actionCards = [
-    {
-      title: "Browse shifts",
-      description: "Find open shifts that fit your schedule and preferred care settings.",
-      href: "/dashboard/worker/shifts",
-      cta: "Browse shifts",
-      icon: CalendarDays
-    },
-    {
-      title: "View applications",
-      description: "Track every application and see what needs your attention next.",
-      href: "/dashboard/worker/applications",
-      cta: "View applications",
-      icon: ClipboardList
-    },
-    {
-      title: "Update profile",
-      description: "Keep your contact and verification details current for facilities.",
-      href: "/dashboard/worker/profile",
-      cta: "Update profile",
-      icon: UserRound
-    }
-  ] as const;
+  const availability = getAvailabilityStatus(
+    data.isVerified,
+    data.upcomingAssignmentsCount
+  );
 
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.9fr]">
-        <Card className="overflow-hidden border-border/70">
-          <div className="bg-[radial-gradient(circle_at_top_right,_rgba(var(--brand-sky-rgb),0.2),transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(var(--brand-cyan-rgb),0.12),transparent_20%),linear-gradient(135deg,rgba(var(--brand-navy-rgb),0.96),rgba(7,108,130,0.9))] p-6 text-white sm:p-8">
-            <Badge className="rounded-full bg-white/15 text-white" variant="outline">
-              Worker overview
-            </Badge>
-            <h2 className="mt-4 max-w-xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+    <div className="space-y-5">
+      <Card className="border-border/70 bg-card/90 shadow-sm">
+        <CardContent className="p-5 sm:p-6">
+          <div className="space-y-1.5">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-[1.85rem]">
               Welcome back, {data.firstName || "there"}
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
-              Keep your verification, shifts, and applications in one place.
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Today&apos;s shifts, applications, and assignments.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button asChild className="rounded-2xl bg-white text-slate-900 hover:bg-white/90">
-                <Link href={primaryHref}>{primaryLabel}</Link>
-              </Button>
-              <Button asChild className="rounded-2xl border-white/20 text-white hover:bg-white/10" variant="outline">
-                <Link href="/dashboard/worker/applications">View applications</Link>
-              </Button>
-            </div>
           </div>
-        </Card>
 
-        <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(19,217,203,0.07),rgba(43,185,255,0.03))]">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Badge variant={verificationVariant} className="rounded-full">
-                {VERIFICATION_STATUS_LABELS[data.verificationStatus]}
-              </Badge>
-              <ShieldCheck className="h-5 w-5 text-primary" />
-            </div>
-            <CardTitle className="text-3xl">Verification status</CardTitle>
-            <CardDescription>
-              {data.isVerified
-                ? "Your profile is ready for applications."
-                : "Finish verification to unlock shift applications."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Button asChild className="flex-1 rounded-2xl" variant="outline">
-                <Link href="/dashboard/worker/verification">
-                  {data.isVerified ? "Review status" : "Continue verification"}
-                  <ArrowUpRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <DashboardMetric label="Open shifts" value={String(data.availableShiftsCount)} />
+            <DashboardMetric label="Applications" value={String(data.totalApplicationsCount)} />
+            <DashboardMetric
+              label="Upcoming assignments"
+              value={String(data.upcomingAssignmentsCount)}
+            />
+            <DashboardMetric
+              label="Profile completion"
+              value={`${data.profileCompletionPercent}%`}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {actionCards.map((card) => {
-          const Icon = card.icon;
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.55fr)]">
+        <div className="space-y-5">
+          <Card className="border-border/70 bg-card/90 shadow-sm">
+            <CardHeader className="p-5 pb-3 sm:p-6 sm:pb-4">
+              <CardTitle className="text-lg">Available Shifts</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+              {data.availableShifts.length ? (
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/40">
+                  <div className="grid grid-cols-[minmax(0,1.7fr)_minmax(7rem,0.9fr)_minmax(5.6rem,0.58fr)] border-b border-border/60 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <div>Role</div>
+                    <div>Date</div>
+                    <div>Rate</div>
+                  </div>
 
-          return (
-            <Card key={card.title} className="border-border/70">
-              <CardHeader className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge variant="soft" className="rounded-full">
-                    Next step
-                  </Badge>
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
-                <CardTitle className="text-2xl">{card.title}</CardTitle>
-                <CardDescription>{card.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button asChild className="w-full rounded-2xl" variant="outline">
-                  <Link href={card.href}>
-                    {card.cta}
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle>Upcoming assignments</CardTitle>
-            <CardDescription>Next scheduled shifts at a glance.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {data.upcomingAssignments.length ? (
-              data.upcomingAssignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="rounded-2xl border border-border/60 bg-background/70 p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="font-medium">{assignment.facilityName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {assignment.date} - {assignment.startTime} to {assignment.endTime}
+                  <div className="divide-y divide-border/40">
+                    {data.availableShifts.map((shift) => (
+                      <div
+                        key={shift.id}
+                        className="grid grid-cols-[minmax(0,1.7fr)_minmax(7rem,0.9fr)_minmax(5.6rem,0.58fr)] items-center gap-3 px-4 py-4 text-sm transition-colors hover:bg-accent/35"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {shift.roleRequired}
+                          </p>
+                          <p className="truncate text-sm text-muted-foreground">
+                            {shift.facilityName} · {shift.startTime} - {shift.endTime}
+                          </p>
+                        </div>
+                        <div className="min-w-0 whitespace-nowrap text-foreground/80">
+                          {formatDate(shift.date)}
+                        </div>
+                        <div className="flex justify-start">
+                          <Badge variant="secondary" className="rounded-full">
+                            {shift.hourlyRateLabel}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                    <Badge variant="secondary" className="rounded-full">
-                      {ASSIGNMENT_STATUS_LABELS[
-                        assignment.status as keyof typeof ASSIGNMENT_STATUS_LABELS
-                      ]}
-                    </Badge>
+                    ))}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
-                No upcoming assignments yet. Browse live shifts to get started.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ) : (
+                <SectionEmpty>No live shifts are available right now.</SectionEmpty>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle>Next steps</CardTitle>
-            <CardDescription>Keep your profile ready and stay available for new opportunities.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button asChild className="w-full rounded-2xl" variant="outline">
-              <Link href="/dashboard/worker/profile">Update profile</Link>
-            </Button>
-            <Button asChild className="w-full rounded-2xl" variant="outline">
-              <Link href="/dashboard/worker/verification">Continue verification</Link>
-            </Button>
-            <Button asChild className="w-full rounded-2xl">
-              <Link href="/dashboard/worker/shifts">Browse shifts</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          <Card className="border-border/70 bg-card/90 shadow-sm">
+            <CardHeader className="p-5 pb-3 sm:p-6 sm:pb-4">
+              <CardTitle className="text-lg">Recent Applications</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+              {data.recentApplications.length ? (
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/40">
+                  <div className="grid grid-cols-[minmax(0,1.7fr)_minmax(7.5rem,0.92fr)_minmax(6.2rem,0.55fr)] border-b border-border/60 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <div>Role</div>
+                    <div>Applied</div>
+                    <div>Status</div>
+                  </div>
+
+                  <div className="divide-y divide-border/40">
+                    {data.recentApplications.map((application) => (
+                      <div
+                        key={application.id}
+                        className="grid grid-cols-[minmax(0,1.7fr)_minmax(7.5rem,0.92fr)_minmax(6.2rem,0.55fr)] items-center gap-3 px-4 py-4 text-sm transition-colors hover:bg-accent/35"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {application.roleRequired}
+                          </p>
+                          <p className="truncate text-sm text-muted-foreground">
+                            {application.facilityName} · {formatDate(application.shiftDate)} ·{" "}
+                            {application.startTime} - {application.endTime}
+                          </p>
+                        </div>
+                        <div className="min-w-0 whitespace-nowrap text-foreground/80">
+                          {formatDate(application.appliedAt)}
+                        </div>
+                        <div className="flex justify-start">
+                          <Badge
+                            className="rounded-full"
+                            variant={
+                              APPLICATION_STATUS_VARIANTS[application.status] ?? "secondary"
+                            }
+                          >
+                            {application.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <SectionEmpty>You have not applied to any shifts yet.</SectionEmpty>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          <Card className="h-fit self-start border-border/70 bg-card/88 shadow-sm">
+            <CardHeader className="p-5 pb-3 sm:p-6 sm:pb-4">
+              <CardTitle className="text-lg">Worker Status</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+              <StatusBlock label="Verification Status">
+                <Badge className="rounded-full" variant={verificationVariant}>
+                  {VERIFICATION_STATUS_LABELS[data.verificationStatus]}
+                </Badge>
+              </StatusBlock>
+
+              <StatusBlock label="Profile Completion">
+                <div className="text-lg font-semibold tracking-tight text-foreground">
+                  {data.profileCompletionPercent}% complete
+                </div>
+              </StatusBlock>
+
+              <StatusBlock label="Availability Status">
+                <Badge className="rounded-full" variant={availability.variant}>
+                  {availability.label}
+                </Badge>
+              </StatusBlock>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-card/90 shadow-sm">
+            <CardHeader className="p-5 pb-3 sm:p-6 sm:pb-4">
+              <CardTitle className="text-lg">Upcoming Assignments</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+              {data.upcomingAssignments.length ? (
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/40">
+                  <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(5.75rem,0.7fr)] border-b border-border/60 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <div>Facility</div>
+                    <div>Status</div>
+                  </div>
+
+                  <div className="divide-y divide-border/40">
+                    {data.upcomingAssignments.map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        className="grid grid-cols-[minmax(0,1.5fr)_minmax(5.75rem,0.7fr)] items-center gap-3 px-4 py-4 text-sm transition-colors hover:bg-accent/35"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {assignment.facilityName}
+                          </p>
+                          <p className="truncate text-sm text-muted-foreground">
+                            {assignment.date} · {assignment.startTime} - {assignment.endTime}
+                          </p>
+                        </div>
+                        <div className="flex justify-start">
+                          <Badge className="rounded-full" variant="soft">
+                            {
+                              ASSIGNMENT_STATUS_LABELS[
+                                assignment.status as keyof typeof ASSIGNMENT_STATUS_LABELS
+                              ]
+                            }
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <SectionEmpty>No upcoming assignments yet.</SectionEmpty>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </section>
     </div>
   );

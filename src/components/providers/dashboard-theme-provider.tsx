@@ -39,6 +39,10 @@ export function DashboardThemeProvider({
 
   React.useEffect(() => {
     return () => {
+      if (window.location.pathname.startsWith("/dashboard")) {
+        return;
+      }
+
       document.documentElement.classList.remove("dark");
       document.documentElement.removeAttribute("data-dashboard-theme");
     };

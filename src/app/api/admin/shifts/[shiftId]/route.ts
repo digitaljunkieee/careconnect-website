@@ -6,6 +6,7 @@ import {
 } from "@/lib/validators/admin";
 import {
   cancelAdminShift,
+  deleteShiftRecord,
   reassignAdminShift
 } from "@/lib/admin-actions";
 
@@ -49,6 +50,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Unable to update shift.",
+      getErrorStatus(error)
+    );
+  }
+}
+
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+  try {
+    const admin = await requireSessionUser(["ADMIN"]);
+
+    if (!admin?.id) {
+      return jsonError("Unauthorized.", 401);
+    }
+
+    const { shiftId } = await context.params;
+    const result = await deleteShiftRecord(admin.id, shiftId);
+
+    return jsonSuccess(result, "Shift deleted.");
+  } catch (error) {
+    return jsonError(
+      error instanceof Error ? error.message : "Unable to delete shift.",
       getErrorStatus(error)
     );
   }

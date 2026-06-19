@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { FacilityApplicantsTable } from "@/components/facility/facility-applicants-table";
 import { getShiftApplicantsData } from "@/lib/facility-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import { getResponsivePageSize, parsePage, parsePageSize } from "@/lib/pagination";
 
 type FacilityShiftApplicantsPageProps = {
   params: Promise<{ shiftId: string }>;
@@ -44,7 +45,10 @@ export default async function FacilityShiftApplicantsPage({
   const resolvedSearchParams = (await searchParams) ?? {};
 
   const page = parsePage(firstQueryValue(resolvedSearchParams.page));
-  const pageSize = parsePageSize(firstQueryValue(resolvedSearchParams.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(resolvedSearchParams.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const applicationStatus = firstQueryValue(resolvedSearchParams.applicationStatus);
   const verificationStatus = firstQueryValue(resolvedSearchParams.verificationStatus);
 
@@ -88,7 +92,7 @@ export default async function FacilityShiftApplicantsPage({
           </Badge>
           <CardTitle className="mt-2">{data.shift.roleRequired}</CardTitle>
           <CardDescription>
-            {data.shift.date} â€¢ {data.shift.startTime} - {data.shift.endTime}
+            {data.shift.date} - {data.shift.startTime} - {data.shift.endTime}
           </CardDescription>
         </CardHeader>
       </Card>

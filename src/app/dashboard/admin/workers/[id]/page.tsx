@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ExternalLink, UserRound } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/pagination-controls";
 import {
   Tabs,
   TabsContent,
@@ -23,9 +25,16 @@ import {
   WORKER_ROLE_TYPE_LABELS
 } from "@/lib/constants";
 import { getAdminWorkerDetailData } from "@/lib/admin-data";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  paginateItems,
+  parsePage
+} from "@/lib/pagination";
 
 type WorkerDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function EmptyState({ label }: { label: string }) {
@@ -36,15 +45,63 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
+function firstQueryValue(
+  value: string | string[] | undefined,
+  fallback = ""
+): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? fallback;
+  }
+
+  return value ?? fallback;
+}
+
 export default async function AdminWorkerDetailPage({
-  params
+  params,
+  searchParams
 }: WorkerDetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
   const data = await getAdminWorkerDetailData(id);
 
   if (!data) {
     notFound();
   }
+
+  const pageSize = getResponsivePageSize((await headers()).get("user-agent"));
+  const documentsPage = parsePage(firstQueryValue(resolvedSearchParams.documentsPage));
+  const logsPage = parsePage(firstQueryValue(resolvedSearchParams.logsPage));
+  const upcomingPage = parsePage(firstQueryValue(resolvedSearchParams.upcomingPage));
+  const completedPage = parsePage(firstQueryValue(resolvedSearchParams.completedPage));
+  const applicationsPage = parsePage(firstQueryValue(resolvedSearchParams.applicationsPage));
+  const documents = paginateItems(data.profile.documents, documentsPage, pageSize);
+  const logs = paginateItems(data.verification.logs, logsPage, pageSize);
+  const upcomingAssignments = paginateItems(
+    data.assignments.upcoming,
+    upcomingPage,
+    pageSize
+  );
+  const completedAssignments = paginateItems(
+    data.assignments.completed,
+    completedPage,
+    pageSize
+  );
+  const applications = paginateItems(data.applications, applicationsPage, pageSize);
+  const basePath = `/dashboard/admin/workers/${id}`;
+  const buildSharedQuery = (
+    nextDocumentsPage: number,
+    nextLogsPage: number,
+    nextUpcomingPage: number,
+    nextCompletedPage: number,
+    nextApplicationsPage: number
+  ) => ({
+    documentsPage: String(nextDocumentsPage),
+    logsPage: String(nextLogsPage),
+    upcomingPage: String(nextUpcomingPage),
+    completedPage: String(nextCompletedPage),
+    applicationsPage: String(nextApplicationsPage),
+    pageSize: String(pageSize)
+  });
 
   return (
     <div className="space-y-6">
@@ -157,7 +214,7 @@ export default async function AdminWorkerDetailPage({
               <CardDescription>Uploaded compliance documents and expiry details.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.profile.documents.length ? (
+              {documents.rows.length ? (
                 <div className="overflow-hidden rounded-3xl border border-border/60">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
@@ -169,7 +226,7 @@ export default async function AdminWorkerDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {data.profile.documents.map((document, index) => (
+                      {documents.rows.map((document, index) => (
                         <tr key={`${document.name ?? "doc"}-${index}`} className="border-t border-border/60">
                           <td className="px-4 py-4 font-medium">{document.name ?? "Document"}</td>
                           <td className="px-4 py-4">{document.uploadedAt ? formatDateTime(document.uploadedAt) : "Unknown"}</td>
@@ -194,6 +251,37 @@ export default async function AdminWorkerDetailPage({
               ) : (
                 <EmptyState label="This worker has not uploaded any documents yet." />
               )}
+              {documents.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      Math.min(documents.page + 1, documents.pageCount),
+                      logs.page,
+                      upcomingAssignments.page,
+                      completedAssignments.page,
+                      applications.page
+                    ),
+                    Math.min(documents.page + 1, documents.pageCount),
+                    "documentsPage"
+                  )}
+                  page={documents.page}
+                  pageCount={documents.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      Math.max(documents.page - 1, 1),
+                      logs.page,
+                      upcomingAssignments.page,
+                      completedAssignments.page,
+                      applications.page
+                    ),
+                    Math.max(documents.page - 1, 1),
+                    "documentsPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>
@@ -205,9 +293,9 @@ export default async function AdminWorkerDetailPage({
               <CardDescription>Latest verification logs and admin decisions.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.verification.logs.length ? (
+              {logs.rows.length ? (
                 <div className="space-y-4">
-                  {data.verification.logs.map((log) => (
+                  {logs.rows.map((log) => (
                     <div key={log.id} className="rounded-3xl border border-border/60 bg-background/70 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -243,6 +331,37 @@ export default async function AdminWorkerDetailPage({
               ) : (
                 <EmptyState label="No verification decisions have been recorded for this worker yet." />
               )}
+              {logs.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      documents.page,
+                      Math.min(logs.page + 1, logs.pageCount),
+                      upcomingAssignments.page,
+                      completedAssignments.page,
+                      applications.page
+                    ),
+                    Math.min(logs.page + 1, logs.pageCount),
+                    "logsPage"
+                  )}
+                  page={logs.page}
+                  pageCount={logs.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      documents.page,
+                      Math.max(logs.page - 1, 1),
+                      upcomingAssignments.page,
+                      completedAssignments.page,
+                      applications.page
+                    ),
+                    Math.max(logs.page - 1, 1),
+                    "logsPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>
@@ -255,13 +374,13 @@ export default async function AdminWorkerDetailPage({
                 <CardDescription>Scheduled shifts the worker is currently assigned to.</CardDescription>
               </CardHeader>
               <CardContent>
-                {data.assignments.upcoming.length ? (
+                {upcomingAssignments.rows.length ? (
                   <div className="space-y-3">
-                    {data.assignments.upcoming.map((assignment) => (
+                    {upcomingAssignments.rows.map((assignment) => (
                       <div key={assignment.id} className="rounded-3xl border border-border/60 bg-background/70 p-4">
                         <div className="font-medium">{assignment.facilityName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.date} • {assignment.hours}
+                          {assignment.date} - {assignment.hours}
                         </div>
                         <Badge className="mt-3" variant="outline">
                           {
@@ -276,6 +395,37 @@ export default async function AdminWorkerDetailPage({
                 ) : (
                   <EmptyState label="No upcoming assignments are scheduled for this worker." />
                 )}
+                {upcomingAssignments.rows.length ? (
+                  <PaginationControls
+                    className="mt-4"
+                    nextHref={buildPageHref(
+                      basePath,
+                      buildSharedQuery(
+                        documents.page,
+                        logs.page,
+                        Math.min(upcomingAssignments.page + 1, upcomingAssignments.pageCount),
+                        completedAssignments.page,
+                        applications.page
+                      ),
+                      Math.min(upcomingAssignments.page + 1, upcomingAssignments.pageCount),
+                      "upcomingPage"
+                    )}
+                    page={upcomingAssignments.page}
+                    pageCount={upcomingAssignments.pageCount}
+                    previousHref={buildPageHref(
+                      basePath,
+                      buildSharedQuery(
+                        documents.page,
+                        logs.page,
+                        Math.max(upcomingAssignments.page - 1, 1),
+                        completedAssignments.page,
+                        applications.page
+                      ),
+                      Math.max(upcomingAssignments.page - 1, 1),
+                      "upcomingPage"
+                    )}
+                  />
+                ) : null}
               </CardContent>
             </Card>
 
@@ -285,13 +435,13 @@ export default async function AdminWorkerDetailPage({
                 <CardDescription>Historical shifts this worker has completed.</CardDescription>
               </CardHeader>
               <CardContent>
-                {data.assignments.completed.length ? (
+                {completedAssignments.rows.length ? (
                   <div className="space-y-3">
-                    {data.assignments.completed.map((assignment) => (
+                    {completedAssignments.rows.map((assignment) => (
                       <div key={assignment.id} className="rounded-3xl border border-border/60 bg-background/70 p-4">
                         <div className="font-medium">{assignment.facilityName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {assignment.date} • {assignment.hours}
+                          {assignment.date} - {assignment.hours}
                         </div>
                         <Badge className="mt-3" variant="secondary">
                           {
@@ -306,6 +456,37 @@ export default async function AdminWorkerDetailPage({
                 ) : (
                   <EmptyState label="No completed assignments have been recorded for this worker yet." />
                 )}
+                {completedAssignments.rows.length ? (
+                  <PaginationControls
+                    className="mt-4"
+                    nextHref={buildPageHref(
+                      basePath,
+                      buildSharedQuery(
+                        documents.page,
+                        logs.page,
+                        upcomingAssignments.page,
+                        Math.min(completedAssignments.page + 1, completedAssignments.pageCount),
+                        applications.page
+                      ),
+                      Math.min(completedAssignments.page + 1, completedAssignments.pageCount),
+                      "completedPage"
+                    )}
+                    page={completedAssignments.page}
+                    pageCount={completedAssignments.pageCount}
+                    previousHref={buildPageHref(
+                      basePath,
+                      buildSharedQuery(
+                        documents.page,
+                        logs.page,
+                        upcomingAssignments.page,
+                        Math.max(completedAssignments.page - 1, 1),
+                        applications.page
+                      ),
+                      Math.max(completedAssignments.page - 1, 1),
+                      "completedPage"
+                    )}
+                  />
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -318,7 +499,7 @@ export default async function AdminWorkerDetailPage({
               <CardDescription>Applications submitted by this worker across all facilities.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.applications.length ? (
+              {applications.rows.length ? (
                 <div className="overflow-hidden rounded-3xl border border-border/60">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
@@ -330,7 +511,7 @@ export default async function AdminWorkerDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {data.applications.map((application) => (
+                      {applications.rows.map((application) => (
                         <tr key={application.id} className="border-t border-border/60">
                           <td className="px-4 py-4">{application.facilityName}</td>
                           <td className="px-4 py-4">{application.shiftLabel}</td>
@@ -346,6 +527,37 @@ export default async function AdminWorkerDetailPage({
               ) : (
                 <EmptyState label="This worker has not submitted any applications yet." />
               )}
+              {applications.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      documents.page,
+                      logs.page,
+                      upcomingAssignments.page,
+                      completedAssignments.page,
+                      Math.min(applications.page + 1, applications.pageCount)
+                    ),
+                    Math.min(applications.page + 1, applications.pageCount),
+                    "applicationsPage"
+                  )}
+                  page={applications.page}
+                  pageCount={applications.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      documents.page,
+                      logs.page,
+                      upcomingAssignments.page,
+                      completedAssignments.page,
+                      Math.max(applications.page - 1, 1)
+                    ),
+                    Math.max(applications.page - 1, 1),
+                    "applicationsPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>

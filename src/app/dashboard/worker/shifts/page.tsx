@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { WorkerShiftBoardTable } from "@/components/worker/worker-shift-board-table";
 import { getWorkerProfileData, getWorkerShiftBoardData } from "@/lib/worker-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import { getResponsivePageSize, parsePage, parsePageSize } from "@/lib/pagination";
 
 type WorkerShiftBoardPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -41,7 +42,10 @@ export default async function WorkerShiftBoardPage({
   const resolvedSearchParams = (await searchParams) ?? {};
 
   const page = parsePage(firstQueryValue(resolvedSearchParams.page));
-  const pageSize = parsePageSize(firstQueryValue(resolvedSearchParams.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(resolvedSearchParams.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const query = {
     search: firstQueryValue(resolvedSearchParams.search),
     role: firstQueryValue(resolvedSearchParams.role),

@@ -56,7 +56,8 @@ export default async function FacilityCreateShiftPage() {
               startTime: "",
               endTime: "",
               hourlyRate: 0,
-              roleRequired: "",
+              roleCategory: "",
+              customRole: "",
               notes: ""
             }}
             mode="create"

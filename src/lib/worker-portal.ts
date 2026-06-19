@@ -44,6 +44,32 @@ type WorkerDashboardAssignmentItem = {
   } | null;
 };
 
+type WorkerDashboardAvailableShiftItem = {
+  _id: unknown;
+  facility?: { companyName?: string } | null;
+  date?: Date;
+  startTime?: string;
+  endTime?: string;
+  hourlyRate?: number;
+  roleRequired?: string;
+  notes?: string;
+};
+
+type WorkerDashboardApplicationItem = {
+  _id: unknown;
+  shiftId?: {
+    _id: unknown;
+    date?: Date;
+    startTime?: string;
+    endTime?: string;
+    hourlyRate?: number;
+    roleRequired?: string;
+    facilityId?: { companyName?: string } | null;
+  } | null;
+  status?: string;
+  createdAt?: Date;
+};
+
 type WorkerShiftBoardItem = {
   _id: unknown;
   facility?: { companyName?: string } | null;
@@ -104,9 +130,12 @@ export type WorkerDashboardData = {
   firstName: string;
   verificationStatus: VerificationStatus;
   isVerified: boolean;
+  profileCompletionPercent: number;
   upcomingAssignmentsCount: number;
   totalApplicationsCount: number;
   availableShiftsCount: number;
+  availableShifts: WorkerShiftBoardRow[];
+  recentApplications: WorkerApplicationRow[];
   upcomingAssignments: Array<{
     id: string;
     facilityName: string;
@@ -160,6 +189,24 @@ export type WorkerAssignmentRow = {
   hours: string;
   status: string;
 };
+
+function getWorkerProfileCompletionPercent(
+  profile: LeanWorkerProfile | null,
+  user: LeanUser | null
+) {
+  const completionChecks = [
+    Boolean(user?.avatarUrl?.trim()),
+    Boolean(profile?.phone?.trim()),
+    Boolean(profile?.niNumber?.trim()),
+    Boolean(profile?.addressHistory?.some((entry) => entry.trim())),
+    Boolean(profile?.shareCode?.trim()),
+    Boolean(profile?.roleType?.trim())
+  ];
+
+  return Math.round(
+    (completionChecks.filter(Boolean).length / completionChecks.length) * 100
+  );
+}
 
 function serializeWorkerProfile(
   profile: LeanWorkerProfile,
@@ -215,7 +262,7 @@ export async function getWorkerDashboardData(userId: string): Promise<WorkerDash
     return null;
   }
 
-  const [upcomingAssignmentsCount, totalApplicationsCount, availableShiftsCount, upcomingAssignmentsRaw] =
+  const [upcomingAssignmentsCount, totalApplicationsCount, availableShiftsCount, upcomingAssignmentsRaw, availableShiftsRaw, recentApplicationsRaw, appliedShiftIds] =
     (await Promise.all([
       Assignment.countDocuments({
         workerId: profile._id,
@@ -239,24 +286,75 @@ export async function getWorkerDashboardData(userId: string): Promise<WorkerDash
             select: "companyName"
           }
         })
-        .lean()
+        .lean(),
+      Shift.find({ status: "OPEN" })
+        .sort({ date: 1, createdAt: 1 })
+        .limit(3)
+        .populate({
+          path: "facilityId",
+          select: "companyName"
+        })
+        .lean(),
+      Application.find({ workerId: profile._id })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .populate({
+          path: "shiftId",
+          select: "date startTime endTime hourlyRate roleRequired facilityId",
+          populate: {
+            path: "facilityId",
+            select: "companyName"
+          }
+        })
+        .lean(),
+      Application.distinct("shiftId", { workerId: profile._id })
     ])) as [
       number,
       number,
       number,
-      WorkerDashboardAssignmentItem[]
+      WorkerDashboardAssignmentItem[],
+      WorkerDashboardAvailableShiftItem[],
+      WorkerDashboardApplicationItem[],
+      unknown[]
     ];
 
-  const upcomingAssignments = upcomingAssignmentsRaw as WorkerDashboardAssignmentItem[];
+  const appliedShiftIdSet = new Set(appliedShiftIds.map((shiftId) => String(shiftId)));
 
   return {
     firstName: user?.firstName ?? "",
     verificationStatus: profile.verificationStatus ?? "PENDING",
     isVerified: Boolean(profile.isVerified),
+    profileCompletionPercent: getWorkerProfileCompletionPercent(profile, user),
     upcomingAssignmentsCount,
     totalApplicationsCount,
     availableShiftsCount,
-    upcomingAssignments: upcomingAssignments.map((assignment) => ({
+    availableShifts: availableShiftsRaw.map((shift) => ({
+      id: String(shift._id),
+      facilityName: shift.facility?.companyName ?? "Unknown facility",
+      date: shift.date ? new Date(shift.date).toISOString() : new Date().toISOString(),
+      startTime: shift.startTime ?? "--:--",
+      endTime: shift.endTime ?? "--:--",
+      hourlyRate: shift.hourlyRate ?? 0,
+      hourlyRateLabel: formatCurrency(shift.hourlyRate ?? 0),
+      roleRequired: shift.roleRequired ?? "",
+      notes: shift.notes ?? "",
+      alreadyApplied: appliedShiftIdSet.has(String(shift._id))
+    })) as WorkerShiftBoardRow[],
+    recentApplications: recentApplicationsRaw.map((application) => ({
+      id: String(application._id),
+      shiftId: String(application.shiftId?._id ?? ""),
+      facilityName: application.shiftId?.facilityId?.companyName ?? "Unknown facility",
+      shiftDate: application.shiftId?.date
+        ? new Date(application.shiftId.date).toISOString()
+        : new Date().toISOString(),
+      startTime: application.shiftId?.startTime ?? "--:--",
+      endTime: application.shiftId?.endTime ?? "--:--",
+      hourlyRateLabel: formatCurrency(application.shiftId?.hourlyRate ?? 0),
+      roleRequired: application.shiftId?.roleRequired ?? "Unknown role",
+      status: application.status ?? "PENDING",
+      appliedAt: application.createdAt?.toISOString?.() ?? new Date().toISOString()
+    })) as WorkerApplicationRow[],
+    upcomingAssignments: upcomingAssignmentsRaw.map((assignment) => ({
       id: String(assignment._id),
       facilityName:
         assignment.shiftId?.facilityId?.companyName ?? "Unknown facility",

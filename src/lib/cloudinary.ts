@@ -1,4 +1,6 @@
 import { Readable } from "node:stream";
+import path from "node:path";
+import { config as loadEnv } from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
 
 export const CLOUDINARY_FOLDERS = {
@@ -26,6 +28,28 @@ const DEFAULT_ALLOWED_MIME_TYPES = new Set([
 const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 let isConfigured = false;
+let isEnvironmentLoaded = false;
+
+const cloudinaryEnvPaths = [
+  path.resolve(process.cwd(), ".env.local"),
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), "../backend/.env.local"),
+  path.resolve(process.cwd(), "../backend/.env"),
+  path.resolve(process.cwd(), "../frontend/.env.local"),
+  path.resolve(process.cwd(), "../frontend/.env")
+];
+
+function loadCloudinaryEnvironment() {
+  if (isEnvironmentLoaded) {
+    return;
+  }
+
+  for (const envPath of cloudinaryEnvPaths) {
+    loadEnv({ path: envPath, override: false });
+  }
+
+  isEnvironmentLoaded = true;
+}
 
 export type CloudinaryUploadResourceType = "image" | "video" | "raw" | "auto";
 
@@ -57,13 +81,15 @@ function configureCloudinary() {
     return;
   }
 
+  loadCloudinaryEnvironment();
+
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
   if (!cloudName || !apiKey || !apiSecret) {
     throw new Error(
-      "Missing Cloudinary environment variables. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+      "Missing Cloudinary environment variables. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in frontend/.env, backend/.env, or your deployment environment."
     );
   }
 

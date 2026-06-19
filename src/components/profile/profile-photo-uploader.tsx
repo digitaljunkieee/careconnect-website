@@ -65,17 +65,14 @@ export function ProfilePhotoUploader({
   const avatarStyles = cn(
     "relative flex items-center justify-center rounded-[1.75rem] outline-none ring-offset-background transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
     isInline
-      ? "h-20 w-20 border border-white/8 bg-[#15243A] shadow-[0_18px_36px_rgba(4,14,38,0.35)]"
+      ? "h-20 w-20 border border-border/70 bg-background/80 shadow-sm"
       : "h-16 w-16 border border-border/60 bg-background shadow-sm",
     avatarClassName
   );
-  const helperClassName = cn(
-    "text-sm",
-    isInline ? "text-white/60" : "text-muted-foreground"
-  );
+  const helperClassName = "text-sm text-muted-foreground";
   const buttonStyles = cn(
     isInline
-      ? "rounded-full border border-white/8 bg-[#15243A] text-white shadow-none hover:bg-white/10 hover:text-white"
+      ? "rounded-2xl border border-border/70 bg-background/80 text-foreground shadow-sm hover:bg-accent hover:text-foreground"
       : "",
     buttonClassName
   );
@@ -137,9 +134,7 @@ export function ProfilePhotoUploader({
         </button>
 
         <div className="space-y-1">
-          <p className={cn("text-sm font-semibold", isInline ? "text-white" : "text-foreground")}>
-            {title}
-          </p>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
           <p className={helperClassName}>{helperText}</p>
         </div>
       </div>

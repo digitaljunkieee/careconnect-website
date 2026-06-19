@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,8 +10,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/pagination-controls";
 import { getAdminComplianceReportData } from "@/lib/admin-platform";
 import { formatDateTime } from "@/lib/format";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  paginateItems,
+  parsePage
+} from "@/lib/pagination";
 
 type ComplianceReportPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -41,11 +49,25 @@ export default async function AdminComplianceReportPage({
   const params = (await searchParams) ?? {};
   const dateFrom = firstQueryValue(params.dateFrom);
   const dateTo = firstQueryValue(params.dateTo);
+  const pageSize = getResponsivePageSize((await headers()).get("user-agent"));
+  const documentsPage = parsePage(firstQueryValue(params.documentsPage));
+  const activityPage = parsePage(firstQueryValue(params.activityPage));
 
   const data = await getAdminComplianceReportData({
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined
   });
+
+  const expiringDocuments = paginateItems(data.expiringDocuments, documentsPage, pageSize);
+  const workerActivity = paginateItems(data.workerActivity, activityPage, pageSize);
+  const basePath = "/dashboard/admin/reports/compliance";
+  const query = {
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    documentsPage: String(expiringDocuments.page),
+    activityPage: String(workerActivity.page),
+    pageSize: String(pageSize)
+  };
 
   const exportParams = new URLSearchParams();
   if (dateFrom) exportParams.set("dateFrom", dateFrom);
@@ -101,36 +123,55 @@ export default async function AdminComplianceReportPage({
             <CardDescription>Documents that expire within the selected date range.</CardDescription>
           </CardHeader>
           <CardContent>
-            {data.expiringDocuments.length ? (
-              <div className="overflow-hidden rounded-3xl border border-border/60">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-left">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Worker</th>
-                      <th className="px-4 py-3 font-medium">Document</th>
-                      <th className="px-4 py-3 font-medium">Expires At</th>
-                      <th className="px-4 py-3 font-medium">Days Left</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.expiringDocuments.map((document) => (
-                      <tr key={`${document.workerName}-${document.documentName}`} className="border-t border-border/60">
-                        <td className="px-4 py-4">
-                          <div className="font-medium">{document.workerName}</div>
-                          <div className="text-xs text-muted-foreground">{document.workerEmail}</div>
-                        </td>
-                        <td className="px-4 py-4">{document.documentName}</td>
-                        <td className="px-4 py-4">{formatDateTime(document.expiresAt)}</td>
-                        <td className="px-4 py-4">
-                          <Badge variant={document.daysRemaining <= 7 ? "destructive" : "outline"}>
-                            {document.daysRemaining} days
-                          </Badge>
-                        </td>
+            {expiringDocuments.rows.length ? (
+              <>
+                <div className="overflow-hidden rounded-3xl border border-border/60">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 text-left">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Worker</th>
+                        <th className="px-4 py-3 font-medium">Document</th>
+                        <th className="px-4 py-3 font-medium">Expires At</th>
+                        <th className="px-4 py-3 font-medium">Days Left</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {expiringDocuments.rows.map((document) => (
+                        <tr key={`${document.workerName}-${document.documentName}`} className="border-t border-border/60">
+                          <td className="px-4 py-4">
+                            <div className="font-medium">{document.workerName}</div>
+                            <div className="text-xs text-muted-foreground">{document.workerEmail}</div>
+                          </td>
+                          <td className="px-4 py-4">{document.documentName}</td>
+                          <td className="px-4 py-4">{formatDateTime(document.expiresAt)}</td>
+                          <td className="px-4 py-4">
+                            <Badge variant={document.daysRemaining <= 7 ? "destructive" : "outline"}>
+                              {document.daysRemaining} days
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    query,
+                    Math.min(expiringDocuments.page + 1, expiringDocuments.pageCount),
+                    "documentsPage"
+                  )}
+                  page={expiringDocuments.page}
+                  pageCount={expiringDocuments.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    query,
+                    Math.max(expiringDocuments.page - 1, 1),
+                    "documentsPage"
+                  )}
+                />
+              </>
             ) : (
               <EmptyState label="No expiring documents were found in the selected range. Try widening the date range to review more records." />
             )}
@@ -143,25 +184,44 @@ export default async function AdminComplianceReportPage({
             <CardDescription>Application and assignment activity within the selected range.</CardDescription>
           </CardHeader>
           <CardContent>
-            {data.workerActivity.length ? (
-              <div className="space-y-3">
-                {data.workerActivity.map((entry) => (
-                  <div key={`${entry.workerName}-${entry.workerEmail}`} className="rounded-3xl border border-border/60 bg-background/70 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="font-medium">{entry.workerName}</div>
-                        <div className="text-sm text-muted-foreground">{entry.workerEmail}</div>
+            {workerActivity.rows.length ? (
+              <>
+                <div className="space-y-3">
+                  {workerActivity.rows.map((entry) => (
+                    <div key={`${entry.workerName}-${entry.workerEmail}`} className="rounded-3xl border border-border/60 bg-background/70 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="font-medium">{entry.workerName}</div>
+                          <div className="text-sm text-muted-foreground">{entry.workerEmail}</div>
+                        </div>
+                        <Badge variant="soft">
+                          {entry.applications} applications / {entry.assignments} assignments
+                        </Badge>
                       </div>
-                      <Badge variant="soft">
-                        {entry.applications} applications / {entry.assignments} assignments
-                      </Badge>
+                      <div className="mt-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                        Last activity {formatDateTime(entry.lastActivityAt)}
+                      </div>
                     </div>
-                    <div className="mt-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                      Last activity {formatDateTime(entry.lastActivityAt)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    query,
+                    Math.min(workerActivity.page + 1, workerActivity.pageCount),
+                    "activityPage"
+                  )}
+                  page={workerActivity.page}
+                  pageCount={workerActivity.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    query,
+                    Math.max(workerActivity.page - 1, 1),
+                    "activityPage"
+                  )}
+                />
+              </>
             ) : (
               <EmptyState label="No worker activity records were found in the selected range. Try widening the date range to review more records." />
             )}

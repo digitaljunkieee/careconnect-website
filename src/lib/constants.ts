@@ -53,6 +53,13 @@ export const APPLICATION_STATUSES = [
 
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  PENDING: "Pending",
+  ACCEPTED: "Accepted",
+  REJECTED: "Rejected",
+  CANCELLED: "Cancelled"
+};
+
 export const SHIFT_STATUSES = ["DRAFT", "OPEN", "FILLED", "CLOSED"] as const;
 
 export type ShiftStatus = (typeof SHIFT_STATUSES)[number];
@@ -89,25 +96,58 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   REFUNDED: "Refunded"
 };
 
+export const NOTIFICATION_RECIPIENT_ROLES = [
+  "worker",
+  "facility",
+  "admin"
+] as const;
+
+export type NotificationRecipientRole =
+  (typeof NOTIFICATION_RECIPIENT_ROLES)[number];
+
+export const NOTIFICATION_RECIPIENT_ROLE_LABELS: Record<
+  NotificationRecipientRole,
+  string
+> = {
+  worker: "Worker",
+  facility: "Facility",
+  admin: "Admin"
+};
+
 export const NOTIFICATION_TYPES = [
-  "INFO",
-  "SUCCESS",
-  "WARNING",
-  "ALERT"
+  "verification",
+  "shift",
+  "application",
+  "payment",
+  "system"
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  verification: "Verification",
+  shift: "Shift",
+  application: "Application",
+  payment: "Payment",
+  system: "System"
+};
 
 export const AUDIT_ACTIONS = [
   "VERIFICATION_SUBMITTED",
   "VERIFICATION_APPROVED",
   "VERIFICATION_REJECTED",
+  "APPLICATION_ACCEPTED",
+  "APPLICATION_REJECTED",
+  "APPLICATION_ASSIGNED",
   "WORKER_ENABLED",
   "WORKER_DISABLED",
+  "WORKER_DELETED",
   "FACILITY_ENABLED",
   "FACILITY_DISABLED",
+  "FACILITY_DELETED",
   "SHIFT_CANCELLED",
   "SHIFT_REASSIGNED",
+  "SHIFT_DELETED",
   "PAYMENT_RECEIVED",
   "PAYMENT_FAILED",
   "PAYMENT_REFUNDED",

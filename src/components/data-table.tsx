@@ -1,15 +1,12 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,6 +15,8 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { PaginationControls } from "@/components/pagination-controls";
+import { buildPageHref } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
 type DataTableProps<TData> = {
@@ -27,8 +26,11 @@ type DataTableProps<TData> = {
   pageCount: number;
   basePath: string;
   query?: Record<string, string | undefined>;
-  emptyState: React.ReactNode;
+  emptyState: ReactNode;
   className?: string;
+  rowClassName?: string;
+  cellClassName?: string;
+  headClassName?: string;
 };
 
 export function DataTable<TData>({
@@ -39,7 +41,10 @@ export function DataTable<TData>({
   basePath,
   query,
   emptyState,
-  className
+  className,
+  rowClassName,
+  cellClassName,
+  headClassName
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -48,24 +53,7 @@ export function DataTable<TData>({
     manualPagination: true,
     pageCount
   });
-
-  const buildHref = React.useCallback(
-    (nextPage: number) => {
-      const params = new URLSearchParams();
-
-      Object.entries(query ?? {}).forEach(([key, value]) => {
-        if (value) {
-          params.set(key, value);
-        }
-      });
-
-      params.set("page", String(nextPage));
-
-      const queryString = params.toString();
-      return queryString ? `${basePath}?${queryString}` : basePath;
-    },
-    [basePath, query]
-  );
+  const currentPage = Math.min(Math.max(page, 1), pageCount);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -75,7 +63,7 @@ export function DataTable<TData>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className={headClassName}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -90,9 +78,9 @@ export function DataTable<TData>({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={rowClassName}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className={cellClassName}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -109,33 +97,13 @@ export function DataTable<TData>({
         </Table>
       </div>
 
-      {pageCount > 1 ? (
-        <div className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-background/80 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex items-center gap-2">
-            <Button
-              asChild
-              className="rounded-2xl"
-              disabled={page <= 1}
-              variant="outline"
-            >
-              <Link href={buildHref(Math.max(page - 1, 1))}>
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Link>
-            </Button>
-            <Button
-              asChild
-              className="rounded-2xl"
-              disabled={page >= pageCount}
-              variant="outline"
-            >
-              <Link href={buildHref(Math.min(page + 1, pageCount))}>
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+      {data.length ? (
+        <PaginationControls
+          nextHref={buildPageHref(basePath, query, Math.min(currentPage + 1, pageCount))}
+          page={currentPage}
+          pageCount={pageCount}
+          previousHref={buildPageHref(basePath, query, Math.max(currentPage - 1, 1))}
+        />
       ) : null}
     </div>
   );

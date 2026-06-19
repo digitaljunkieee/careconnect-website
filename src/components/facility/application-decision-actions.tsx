@@ -36,7 +36,7 @@ export function ApplicationDecisionActions({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       <ConfirmationActionButton
         confirmLabel="Accept"
         confirmVariant="default"
@@ -61,8 +61,8 @@ export function ApplicationDecisionActions({
           router.refresh();
         }}
         title="Accept this applicant?"
-        triggerClassName="rounded-2xl"
-        triggerVariant="default"
+        triggerClassName="h-8 rounded-xl px-3 text-xs font-semibold"
+        triggerVariant="outline"
       >
         Accept
       </ConfirmationActionButton>
@@ -90,7 +90,7 @@ export function ApplicationDecisionActions({
           router.refresh();
         }}
         title="Reject this applicant?"
-        triggerClassName="rounded-2xl"
+        triggerClassName="h-8 rounded-xl px-3 text-xs font-semibold"
         triggerVariant="outline"
       >
         Reject

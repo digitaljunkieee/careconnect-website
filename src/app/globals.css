@@ -110,6 +110,11 @@
       rgba(var(--brand-sky-rgb), 0.96)
     );
   }
+
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+    opacity: 0;
+  }
 }
 
 @layer utilities {

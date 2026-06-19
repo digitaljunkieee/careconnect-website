@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isShiftRoleCategory } from "@/lib/shift-roles";
 
 export const facilityProfileSchema = z.object({
   companyName: z.string().trim().min(2, "Company name is required.").max(120),
@@ -11,7 +12,7 @@ export const facilityProfileSchema = z.object({
 
 export type FacilityProfileInput = z.infer<typeof facilityProfileSchema>;
 
-export const shiftFormSchema = z.object({
+const shiftFormBaseSchema = z.object({
   date: z.string().trim().min(1, "Shift date is required."),
   startTime: z
     .string()
@@ -19,15 +20,40 @@ export const shiftFormSchema = z.object({
     .regex(/^\d{2}:\d{2}$/, "Use HH:MM format."),
   endTime: z.string().trim().regex(/^\d{2}:\d{2}$/, "Use HH:MM format."),
   hourlyRate: z.coerce.number().positive("Hourly rate must be greater than zero."),
-  roleRequired: z.string().trim().min(2, "Role required is needed.").max(120),
+  roleCategory: z
+    .string()
+    .trim()
+    .min(1, "Select a role.")
+    .refine((value) => isShiftRoleCategory(value), {
+      message: "Select a valid role."
+    }),
+  customRole: z.string().trim().max(120).optional().default(""),
+  requiredQualifications: z.string().trim().max(2000).optional().default(""),
   notes: z.string().trim().max(2000).optional().default("")
 });
 
+function validateCustomRole(
+  data: z.infer<typeof shiftFormBaseSchema>,
+  ctx: z.RefinementCtx
+) {
+  if (data.roleCategory === "Other Role" && !data.customRole.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["customRole"],
+      message: "Enter a custom role."
+    });
+  }
+}
+
+export const shiftFormSchema = shiftFormBaseSchema.superRefine(validateCustomRole);
+
 export type ShiftFormInput = z.infer<typeof shiftFormSchema>;
 
-export const shiftUpdateSchema = shiftFormSchema.extend({
-  status: z.enum(["OPEN", "CLOSED", "FILLED"]).optional()
-});
+export const shiftUpdateSchema = shiftFormBaseSchema
+  .extend({
+    status: z.enum(["OPEN", "CLOSED", "FILLED"]).optional()
+  })
+  .superRefine(validateCustomRole);
 
 export type ShiftUpdateInput = z.infer<typeof shiftUpdateSchema>;
 

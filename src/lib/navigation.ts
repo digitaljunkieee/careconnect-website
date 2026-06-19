@@ -1,7 +1,14 @@
 import {
   CalendarDays,
+  Bell,
+  Building2,
   ClipboardList,
+  History,
   LayoutDashboard,
+  ListTodo,
+  Settings2,
+  ShieldCheck,
+  Users,
   UserRound,
 } from "lucide-react";
 import type { Role } from "@/lib/constants";
@@ -25,6 +32,30 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       mobile: true
     },
     {
+      id: "admin-workers",
+      label: "Workers",
+      href: "/dashboard/admin/workers",
+      icon: Users,
+      match: "prefix",
+      mobile: true
+    },
+    {
+      id: "admin-facilities",
+      label: "Facilities",
+      href: "/dashboard/admin/facilities",
+      icon: Building2,
+      match: "prefix",
+      mobile: true
+    },
+    {
+      id: "admin-verifications",
+      label: "Verifications",
+      href: "/dashboard/admin/verifications",
+      icon: ShieldCheck,
+      match: "prefix",
+      mobile: true
+    },
+    {
       id: "admin-shifts",
       label: "Shifts",
       href: "/dashboard/admin/shifts",
@@ -33,18 +64,35 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       mobile: true
     },
     {
-      id: "admin-applications",
-      label: "Applications",
-      href: "/dashboard/admin/applications",
-      icon: ClipboardList,
+      id: "admin-assignments",
+      label: "Assignments",
+      href: "/dashboard/admin/assignments",
+      icon: ListTodo,
       match: "prefix",
       mobile: true
     },
     {
-      id: "admin-profile",
-      label: "Profile",
+      id: "admin-notifications",
+      label: "Notifications",
+      href: "/dashboard/admin/notifications",
+      icon: Bell,
+      match: "prefix",
+      mobile: true
+    },
+    {
+      id: "admin-activity-log",
+      label: "Activity Log",
+      href: "/dashboard/admin/activity-log",
+      icon: History,
+      match: "prefix",
+      mobile: true
+    },
+    {
+      id: "admin-settings",
+      label: "Settings",
       href: "/dashboard/admin/settings",
-      icon: UserRound,
+      icon: Settings2,
+      match: "prefix",
       mobile: true
     }
   ],
@@ -75,6 +123,7 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       label: "Profile",
       href: "/dashboard/worker/profile",
       icon: UserRound,
+      match: "prefix",
       mobile: true
     }
   ],
@@ -106,6 +155,7 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       label: "Profile",
       href: "/dashboard/facility/profile",
       icon: UserRound,
+      match: "prefix",
       mobile: true
     }
   ]

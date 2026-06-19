@@ -19,6 +19,7 @@ type FacilityApplicantsTableProps = {
   basePath: string;
   query: Record<string, string | undefined>;
   showShift?: boolean;
+  showRoleType?: boolean;
 };
 
 const VERIFICATION_VARIANTS: Record<VerificationStatus, "default" | "secondary" | "destructive" | "outline" | "soft"> = {
@@ -34,12 +35,13 @@ export function FacilityApplicantsTable({
   pageCount,
   basePath,
   query,
-  showShift = false
+  showShift = false,
+  showRoleType = true
 }: FacilityApplicantsTableProps) {
   const columns: ColumnDef<ApplicantRow>[] = [
     {
       accessorKey: "workerName",
-      header: "Worker Name",
+      header: "Worker",
       cell: ({ row }) => <div className="font-medium">{row.original.workerName}</div>
     },
     ...(showShift
@@ -57,24 +59,31 @@ export function FacilityApplicantsTable({
       : []),
     {
       accessorKey: "verificationStatus",
-      header: "Verification Status",
+      header: "Verification",
       cell: ({ row }) => (
-        <Badge variant={VERIFICATION_VARIANTS[row.original.verificationStatus]}>
+        <Badge
+          className="h-6 rounded-full px-2 text-[11px] font-semibold tracking-[0.08em]"
+          variant={VERIFICATION_VARIANTS[row.original.verificationStatus]}
+        >
           {VERIFICATION_STATUS_LABELS[row.original.verificationStatus]}
         </Badge>
       )
     },
-    {
-      accessorKey: "roleType",
-      header: "Role Type",
-      cell: ({ row }) =>
-        WORKER_ROLE_TYPE_LABELS[
-          row.original.roleType as keyof typeof WORKER_ROLE_TYPE_LABELS
-        ] ?? row.original.roleType
-    },
+    ...(showRoleType
+      ? ([
+          {
+            accessorKey: "roleType",
+            header: "Role",
+            cell: ({ row }) =>
+              WORKER_ROLE_TYPE_LABELS[
+                row.original.roleType as keyof typeof WORKER_ROLE_TYPE_LABELS
+              ] ?? row.original.roleType
+          }
+        ] as ColumnDef<ApplicantRow>[])
+      : []),
     {
       accessorKey: "appliedAt",
-      header: "Application Date",
+      header: "Applied",
       cell: ({ row }) => formatDateTime(row.original.appliedAt)
     },
     {
@@ -82,6 +91,7 @@ export function FacilityApplicantsTable({
       header: "Status",
       cell: ({ row }) => (
         <Badge
+          className="h-6 rounded-full px-2 text-[11px] font-semibold tracking-[0.08em]"
           variant={
             row.original.applicationStatus === "ACCEPTED"
               ? "soft"
@@ -111,7 +121,7 @@ export function FacilityApplicantsTable({
       basePath={basePath}
       columns={columns}
       data={rows}
-      emptyState="No applications match your filters. Try widening the search or clearing a filter."
+      emptyState="No applications match your filters."
       page={page}
       pageCount={pageCount}
       query={query}

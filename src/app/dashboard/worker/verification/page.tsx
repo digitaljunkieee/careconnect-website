@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -18,18 +19,46 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { WorkerDocumentUpload } from "@/components/worker/worker-document-upload";
+import { PaginationControls } from "@/components/pagination-controls";
 import { VERIFICATION_STATUS_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 import { getVerificationHistory } from "@/lib/worker-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  paginateItems,
+  parsePage
+} from "@/lib/pagination";
 
-export default async function WorkerVerificationPage() {
+type WorkerVerificationPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function firstQueryValue(
+  value: string | string[] | undefined,
+  fallback = ""
+): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? fallback;
+  }
+
+  return value ?? fallback;
+}
+
+export default async function WorkerVerificationPage({
+  searchParams
+}: WorkerVerificationPageProps) {
   const user = await requireSessionUser(["WORKER"]);
 
   if (!user) {
     redirect("/login");
   }
 
+  const params = (await searchParams) ?? {};
+  const pageSize = getResponsivePageSize((await headers()).get("user-agent"));
+  const documentsPage = parsePage(firstQueryValue(params.documentsPage));
+  const historyPage = parsePage(firstQueryValue(params.historyPage));
   const history = await getVerificationHistory(user.id);
 
   if (!history) {
@@ -51,6 +80,14 @@ export default async function WorkerVerificationPage() {
   }
 
   const documents = history.documents ?? [];
+  const paginatedDocuments = paginateItems(documents, documentsPage, pageSize);
+  const paginatedHistory = paginateItems(history.logs, historyPage, pageSize);
+  const basePath = "/dashboard/worker/verification";
+  const buildSharedQuery = (nextDocumentsPage: number, nextHistoryPage: number) => ({
+    documentsPage: String(nextDocumentsPage),
+    historyPage: String(nextHistoryPage),
+    pageSize: String(pageSize)
+  });
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -116,8 +153,8 @@ export default async function WorkerVerificationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {documents.length ? (
-                    documents.map((document) => (
+                  {paginatedDocuments.rows.length ? (
+                    paginatedDocuments.rows.map((document) => (
                       <TableRow key={`${document.publicId ?? document.name}-${String(document.uploadedAt ?? "")}`}>
                         <TableCell className="font-medium">
                           {document.name ?? "Document"}
@@ -149,6 +186,28 @@ export default async function WorkerVerificationPage() {
                 </TableBody>
               </Table>
             </div>
+            {paginatedDocuments.rows.length ? (
+              <PaginationControls
+                className="mt-4"
+                nextHref={buildPageHref(
+                  basePath,
+                  buildSharedQuery(
+                    Math.min(paginatedDocuments.page + 1, paginatedDocuments.pageCount),
+                    paginatedHistory.page
+                  ),
+                  Math.min(paginatedDocuments.page + 1, paginatedDocuments.pageCount),
+                  "documentsPage"
+                )}
+                page={paginatedDocuments.page}
+                pageCount={paginatedDocuments.pageCount}
+                previousHref={buildPageHref(
+                  basePath,
+                  buildSharedQuery(Math.max(paginatedDocuments.page - 1, 1), paginatedHistory.page),
+                  Math.max(paginatedDocuments.page - 1, 1),
+                  "documentsPage"
+                )}
+              />
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -174,8 +233,8 @@ export default async function WorkerVerificationPage() {
           </CardDescription>
         </CardHeader>
           <CardContent className="space-y-3">
-            {history.logs.length ? (
-              history.logs.map((log) => (
+            {paginatedHistory.rows.length ? (
+              paginatedHistory.rows.map((log) => (
                 <div
                   key={log.id}
                   className="rounded-2xl border border-border/60 bg-background/70 p-4"
@@ -215,6 +274,31 @@ export default async function WorkerVerificationPage() {
                 No verification activity has been recorded yet.
               </div>
             )}
+            {paginatedHistory.rows.length ? (
+              <PaginationControls
+                className="mt-4"
+                nextHref={buildPageHref(
+                  basePath,
+                  buildSharedQuery(
+                    paginatedDocuments.page,
+                    Math.min(paginatedHistory.page + 1, paginatedHistory.pageCount)
+                  ),
+                  Math.min(paginatedHistory.page + 1, paginatedHistory.pageCount),
+                  "historyPage"
+                )}
+                page={paginatedHistory.page}
+                pageCount={paginatedHistory.pageCount}
+                previousHref={buildPageHref(
+                  basePath,
+                  buildSharedQuery(
+                    paginatedDocuments.page,
+                    Math.max(paginatedHistory.page - 1, 1)
+                  ),
+                  Math.max(paginatedHistory.page - 1, 1),
+                  "historyPage"
+                )}
+              />
+            ) : null}
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Building2 } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/pagination-controls";
 import {
   Tabs,
   TabsContent,
@@ -19,9 +21,16 @@ import {
 import { formatDateTime } from "@/lib/format";
 import { SHIFT_STATUS_LABELS, WORKER_ROLE_TYPE_LABELS } from "@/lib/constants";
 import { getAdminFacilityDetailData } from "@/lib/admin-data";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  paginateItems,
+  parsePage
+} from "@/lib/pagination";
 
 type FacilityDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function EmptyState({ label }: { label: string }) {
@@ -32,15 +41,44 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
+function firstQueryValue(value: string | string[] | undefined, fallback = ""): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? fallback;
+  }
+
+  return value ?? fallback;
+}
+
 export default async function AdminFacilityDetailPage({
-  params
+  params,
+  searchParams
 }: FacilityDetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
   const data = await getAdminFacilityDetailData(id);
 
   if (!data) {
     notFound();
   }
+
+  const pageSize = getResponsivePageSize((await headers()).get("user-agent"));
+  const workersPage = parsePage(firstQueryValue(resolvedSearchParams.workersPage));
+  const applicationsPage = parsePage(firstQueryValue(resolvedSearchParams.applicationsPage));
+  const shiftsPage = parsePage(firstQueryValue(resolvedSearchParams.shiftsPage));
+  const workers = paginateItems(data.workersUsed, workersPage, pageSize);
+  const applications = paginateItems(data.applications, applicationsPage, pageSize);
+  const shifts = paginateItems(data.shifts, shiftsPage, pageSize);
+  const basePath = `/dashboard/admin/facilities/${id}`;
+  const buildSharedQuery = (
+    nextWorkersPage: number,
+    nextApplicationsPage: number,
+    nextShiftsPage: number
+  ) => ({
+    workersPage: String(nextWorkersPage),
+    applicationsPage: String(nextApplicationsPage),
+    shiftsPage: String(nextShiftsPage),
+    pageSize: String(pageSize)
+  });
 
   return (
     <div className="space-y-6">
@@ -164,7 +202,7 @@ export default async function AdminFacilityDetailPage({
               <CardDescription>Assigned workers and how often they have supported this facility.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.workersUsed.length ? (
+              {workers.rows.length ? (
                 <div className="overflow-hidden rounded-3xl border border-border/60">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
@@ -175,7 +213,7 @@ export default async function AdminFacilityDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {data.workersUsed.map((worker) => (
+                      {workers.rows.map((worker) => (
                         <tr key={worker.id} className="border-t border-border/60">
                           <td className="px-4 py-4">{worker.workerName}</td>
                           <td className="px-4 py-4">{WORKER_ROLE_TYPE_LABELS[worker.roleType]}</td>
@@ -188,6 +226,33 @@ export default async function AdminFacilityDetailPage({
               ) : (
                 <EmptyState label="No workers have been assigned to this facility yet. Post a shift to start building a coverage history." />
               )}
+              {workers.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      Math.min(workers.page + 1, workers.pageCount),
+                      applications.page,
+                      shifts.page
+                    ),
+                    Math.min(workers.page + 1, workers.pageCount),
+                    "workersPage"
+                  )}
+                  page={workers.page}
+                  pageCount={workers.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      Math.max(workers.page - 1, 1),
+                      applications.page,
+                      shifts.page
+                    ),
+                    Math.max(workers.page - 1, 1),
+                    "workersPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>
@@ -199,7 +264,7 @@ export default async function AdminFacilityDetailPage({
               <CardDescription>Applications attached to shifts at this facility.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.applications.length ? (
+              {applications.rows.length ? (
                 <div className="overflow-hidden rounded-3xl border border-border/60">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
@@ -211,7 +276,7 @@ export default async function AdminFacilityDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {data.applications.map((application) => (
+                      {applications.rows.map((application) => (
                         <tr key={application.id} className="border-t border-border/60">
                           <td className="px-4 py-4">{application.workerName}</td>
                           <td className="px-4 py-4">{application.shiftLabel}</td>
@@ -227,6 +292,33 @@ export default async function AdminFacilityDetailPage({
               ) : (
                 <EmptyState label="This facility has not received any applications yet." />
               )}
+              {applications.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      workers.page,
+                      Math.min(applications.page + 1, applications.pageCount),
+                      shifts.page
+                    ),
+                    Math.min(applications.page + 1, applications.pageCount),
+                    "applicationsPage"
+                  )}
+                  page={applications.page}
+                  pageCount={applications.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      workers.page,
+                      Math.max(applications.page - 1, 1),
+                      shifts.page
+                    ),
+                    Math.max(applications.page - 1, 1),
+                    "applicationsPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>
@@ -238,7 +330,7 @@ export default async function AdminFacilityDetailPage({
               <CardDescription>Shift records connected to this facility.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.shifts.length ? (
+              {shifts.rows.length ? (
                 <div className="overflow-hidden rounded-3xl border border-border/60">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
@@ -249,7 +341,7 @@ export default async function AdminFacilityDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {data.shifts.map((shift) => (
+                      {shifts.rows.map((shift) => (
                         <tr key={shift.id} className="border-t border-border/60">
                           <td className="px-4 py-4">{shift.date}</td>
                           <td className="px-4 py-4">{shift.roleRequired}</td>
@@ -264,6 +356,33 @@ export default async function AdminFacilityDetailPage({
               ) : (
                 <EmptyState label="No shift records have been added for this facility yet." />
               )}
+              {shifts.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      workers.page,
+                      applications.page,
+                      Math.min(shifts.page + 1, shifts.pageCount)
+                    ),
+                    Math.min(shifts.page + 1, shifts.pageCount),
+                    "shiftsPage"
+                  )}
+                  page={shifts.page}
+                  pageCount={shifts.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    buildSharedQuery(
+                      workers.page,
+                      applications.page,
+                      Math.max(shifts.page - 1, 1)
+                    ),
+                    Math.max(shifts.page - 1, 1),
+                    "shiftsPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>

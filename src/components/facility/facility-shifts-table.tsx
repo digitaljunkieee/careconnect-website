@@ -32,9 +32,14 @@ export function FacilityShiftsTable({
 }: FacilityShiftsTableProps) {
   const columns: ColumnDef<FacilityShiftRow>[] = [
     {
+      accessorKey: "roleRequired",
+      header: "Role",
+      cell: ({ row }) => <div className="font-medium text-foreground">{row.original.roleRequired}</div>
+    },
+    {
       accessorKey: "date",
       header: "Date",
-      cell: ({ row }) => formatDate(row.original.date)
+      cell: ({ row }) => <div className="text-foreground/80">{formatDate(row.original.date)}</div>
     },
     {
       accessorKey: "startTime",
@@ -43,15 +48,8 @@ export function FacilityShiftsTable({
     },
     {
       accessorKey: "hourlyRate",
-      header: "Hourly Rate",
-      cell: ({ row }) => (
-        <Badge variant="secondary">{row.original.hourlyRateLabel}</Badge>
-      )
-    },
-    {
-      accessorKey: "roleRequired",
-      header: "Role Required",
-      cell: ({ row }) => row.original.roleRequired
+      header: "Rate",
+      cell: ({ row }) => <Badge variant="secondary">{row.original.hourlyRateLabel}</Badge>
     },
     {
       accessorKey: "status",
@@ -65,15 +63,11 @@ export function FacilityShiftsTable({
     {
       accessorKey: "applicationCount",
       header: "Applicants",
-      cell: ({ row }) => row.original.applicationCount
-    },
-    {
-      id: "actions",
-      header: "Actions",
       cell: ({ row }) => (
         <FacilityShiftActions
           shiftId={row.original.id}
           status={row.original.status}
+          applicationCount={row.original.applicationCount}
         />
       )
     }
@@ -84,10 +78,13 @@ export function FacilityShiftsTable({
       basePath={basePath}
       columns={columns}
       data={rows}
+      cellClassName="px-4 py-5"
       emptyState="No shifts match your filters. Try widening the search or clearing the status filter."
+      headClassName="h-11 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
       page={page}
       pageCount={pageCount}
       query={query}
+      rowClassName="border-border/40 hover:bg-accent/30"
     />
   );
 }

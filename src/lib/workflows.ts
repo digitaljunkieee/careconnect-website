@@ -11,10 +11,16 @@ import {
   formatDate,
   formatName
 } from "@/lib/format";
+import {
+  resolveShiftRoleLabel
+} from "@/lib/shift-roles";
 import { uploadWorkerDocument } from "@/lib/cloudinary";
 import {
   notifyAdmins,
   notifyFacilityNewApplication,
+  notifyFacilityShiftCreated,
+  notifyFacilityShiftFilled,
+  notifyWorkerShiftCompleted,
   notifyWorkerApplicationDecision,
   notifyWorkerApplicationSubmitted
 } from "@/lib/notifications";
@@ -237,7 +243,8 @@ export async function uploadWorkerVerificationDocument(
       await notifyAdmins({
         title: "Worker verification submitted",
         message: `A worker submitted verification documents and the request is now pending review.`,
-        type: "INFO"
+        type: "verification",
+        actionUrl: "/dashboard/admin/verifications"
       });
     } catch (error) {
       console.warn("Failed to notify admins about verification submission:", error);
@@ -275,7 +282,9 @@ export async function createShiftForFacility(
     startTime: string;
     endTime: string;
     hourlyRate: number;
-    roleRequired: string;
+    roleCategory: string;
+    customRole?: string;
+    requiredQualifications?: string;
     notes?: string;
   }
 ) {
@@ -286,16 +295,48 @@ export async function createShiftForFacility(
     throw new Error("Facility profile not found.");
   }
 
+  const roleCategory = input.roleCategory.trim();
+  const customRole = roleCategory === "Other Role" ? input.customRole?.trim() ?? "" : "";
+  const roleRequired = resolveShiftRoleLabel({
+    roleCategory,
+    customRole
+  });
+
   const shift = await Shift.create({
     facilityId: profile._id,
     date: normalizeShiftDate(input.date),
     startTime: input.startTime,
     endTime: input.endTime,
     hourlyRate: input.hourlyRate,
-    roleRequired: input.roleRequired.trim(),
+    roleCategory,
+    customRole: roleCategory === "Other Role" ? customRole : "",
+    roleRequired,
+    requiredQualifications: input.requiredQualifications?.trim() ?? "",
     notes: input.notes?.trim() ?? "",
     status: "OPEN"
   });
+
+  const shiftTitle = `${roleRequired} on ${formatDate(shift.date)}`;
+  const facilityUserId = String(profile.userId ?? "");
+
+  if (facilityUserId) {
+    try {
+      await notifyFacilityShiftCreated(facilityUserId, shiftTitle);
+    } catch (error) {
+      console.warn("Failed to notify facility about shift creation:", error);
+    }
+  }
+
+  try {
+    await notifyAdmins({
+      title: "Facility posted shift",
+      message: `${profile.companyName} created ${shiftTitle}.`,
+      type: "shift",
+      actionUrl: "/dashboard/admin/shifts"
+    });
+  } catch (error) {
+    console.warn("Failed to notify admins about new shift:", error);
+  }
 
   return shift.toObject();
 }
@@ -308,7 +349,9 @@ export async function updateShiftForFacility(
     startTime: string;
     endTime: string;
     hourlyRate: number;
-    roleRequired: string;
+    roleCategory: string;
+    customRole?: string;
+    requiredQualifications?: string;
     notes?: string;
     status?: ShiftStatus;
   }
@@ -320,6 +363,13 @@ export async function updateShiftForFacility(
     throw new Error("Facility profile not found.");
   }
 
+  const roleCategory = input.roleCategory.trim();
+  const customRole = roleCategory === "Other Role" ? input.customRole?.trim() ?? "" : "";
+  const roleRequired = resolveShiftRoleLabel({
+    roleCategory,
+    customRole
+  });
+
   const shift = await Shift.findOneAndUpdate(
     { _id: shiftId, facilityId: profile._id },
     {
@@ -328,7 +378,10 @@ export async function updateShiftForFacility(
         startTime: input.startTime,
         endTime: input.endTime,
         hourlyRate: input.hourlyRate,
-        roleRequired: input.roleRequired.trim(),
+        roleCategory,
+        customRole: roleCategory === "Other Role" ? customRole : "",
+        roleRequired,
+        requiredQualifications: input.requiredQualifications?.trim() ?? "",
         notes: input.notes?.trim() ?? "",
         ...(input.status ? { status: input.status } : {})
       }
@@ -363,6 +416,32 @@ export async function setShiftStatusForFacility(
 
   if (!shift) {
     throw new Error("Shift not found.");
+  }
+
+  if (status === "CLOSED") {
+    const completedAssignments = await Assignment.find({
+      shiftId: shift._id
+    })
+      .populate({
+        path: "workerId",
+        select: "userId"
+      })
+      .lean();
+
+    await Promise.allSettled(
+      completedAssignments
+        .map((assignment) => {
+          const workerProfile = assignment.workerId as { userId?: unknown } | undefined;
+          return String(workerProfile?.userId ?? "");
+        })
+        .filter(Boolean)
+        .map((workerUserId) =>
+          notifyWorkerShiftCompleted(
+            workerUserId,
+            `${shift.roleRequired} on ${formatDate(shift.date)}`
+          )
+        )
+    );
   }
 
   return shift;
@@ -469,19 +548,27 @@ export async function applyWorkerToShift(userId: string, shiftId: string) {
         workerContact?.email ||
         "A worker";
 
-      await notifyWorkerApplicationSubmitted(
-        String(workerProfile.userId),
-        shiftTitle,
-        session
-      );
-
-      if (facilityUserId) {
-        await notifyFacilityNewApplication(
-          facilityUserId,
+      try {
+        await notifyWorkerApplicationSubmitted(
+          String(workerProfile.userId),
           shiftTitle,
-          workerName,
           session
         );
+      } catch (error) {
+        console.warn("Failed to notify worker about submitted application:", error);
+      }
+
+      if (facilityUserId) {
+        try {
+          await notifyFacilityNewApplication(
+            facilityUserId,
+            shiftTitle,
+            workerName,
+            session
+          );
+        } catch (error) {
+          console.warn("Failed to notify facility about new application:", error);
+        }
       }
     });
 
@@ -618,12 +705,29 @@ export async function decideShiftApplication(
           { session }
         );
 
-        await notifyWorkerApplicationDecision(
-          String(workerProfile.userId),
-          `${shift.roleRequired} on ${formatDate(shift.date)}`,
-          "ACCEPTED",
-          session
-        );
+        const facilityUserId = String(facilityProfile.userId ?? "");
+        if (facilityUserId) {
+          try {
+            await notifyFacilityShiftFilled(
+              facilityUserId,
+              `${shift.roleRequired} on ${formatDate(shift.date)}`,
+              session
+            );
+          } catch (error) {
+            console.warn("Failed to notify facility that shift was filled:", error);
+          }
+        }
+
+        try {
+          await notifyWorkerApplicationDecision(
+            String(workerProfile.userId),
+            `${shift.roleRequired} on ${formatDate(shift.date)}`,
+            "ACCEPTED",
+            session
+          );
+        } catch (error) {
+          console.warn("Failed to notify worker about accepted application:", error);
+        }
 
         const otherWorkerProfiles = await WorkerProfile.find({
           _id: { $in: otherApplications.map((app) => app.workerId) }
@@ -631,7 +735,7 @@ export async function decideShiftApplication(
           .select("userId")
           .session(session);
 
-        await Promise.all(
+        await Promise.allSettled(
           otherWorkerProfiles.map((profile) =>
             notifyWorkerApplicationDecision(
               String(profile.userId),
@@ -651,12 +755,16 @@ export async function decideShiftApplication(
         currentApplication.status = "REJECTED";
         await currentApplication.save({ session });
 
-        await notifyWorkerApplicationDecision(
-          String(workerProfile.userId),
-          `${shift.roleRequired} on ${formatDate(shift.date)}`,
-          "REJECTED",
-          session
-        );
+        try {
+          await notifyWorkerApplicationDecision(
+            String(workerProfile.userId),
+            `${shift.roleRequired} on ${formatDate(shift.date)}`,
+            "REJECTED",
+            session
+          );
+        } catch (error) {
+          console.warn("Failed to notify worker about rejected application:", error);
+        }
 
         decisionResult = {
           status: "REJECTED",

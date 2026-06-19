@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { WorkerApplicationsTable } from "@/components/worker/worker-applications-table";
 import { getWorkerApplicationsData } from "@/lib/worker-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import { getResponsivePageSize, parsePage, parsePageSize } from "@/lib/pagination";
 
 type WorkerApplicationsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -40,7 +41,10 @@ export default async function WorkerApplicationsPage({
   const resolvedSearchParams = (await searchParams) ?? {};
 
   const page = parsePage(firstQueryValue(resolvedSearchParams.page));
-  const pageSize = parsePageSize(firstQueryValue(resolvedSearchParams.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(resolvedSearchParams.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const status = firstQueryValue(resolvedSearchParams.status);
 
   const data = await getWorkerApplicationsData(user.id, {

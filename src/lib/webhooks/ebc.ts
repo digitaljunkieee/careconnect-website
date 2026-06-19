@@ -194,17 +194,21 @@ export async function processEbcWebhookPayload(
       }
     }
 
-    await notifyAdmins(
-      {
+    try {
+      await notifyAdmins({
         title: "EBC verification update",
         message: `${workerName} verification moved to ${nextStatus}.`,
-        type: nextStatus === "VERIFIED" ? "SUCCESS" : "INFO"
-      }
-    );
+        type: "verification",
+        actionUrl: "/dashboard/admin/verifications"
+      });
+    } catch (error) {
+      console.warn("Failed to notify admins about EBC verification update:", error);
+    }
 
-    await createNotification(
-      {
-        userId: String(workerUser?._id ?? workerProfile.userId),
+    try {
+      await createNotification({
+        recipient: String(workerUser?._id ?? workerProfile.userId),
+        recipientRole: "worker",
         title:
           nextStatus === "VERIFIED"
             ? "Verification approved"
@@ -217,9 +221,12 @@ export async function processEbcWebhookPayload(
             : nextStatus === "REJECTED"
               ? payload.notes || "Your verification was rejected. Please review the latest update."
               : "EBC has requested additional information or your verification is still in review.",
-        type: nextStatus === "VERIFIED" ? "SUCCESS" : "WARNING"
-      }
-    );
+        type: "verification",
+        actionUrl: "/dashboard/worker/verification"
+      });
+    } catch (error) {
+      console.warn("Failed to notify worker about EBC verification update:", error);
+    }
 
     eventLog.status = "PROCESSED";
     eventLog.processedAt = new Date();

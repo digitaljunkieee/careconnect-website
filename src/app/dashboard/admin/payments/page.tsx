@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,8 +10,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/pagination-controls";
 import { getAdminPaymentListData } from "@/lib/admin-platform";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  parsePage,
+  parsePageSize
+} from "@/lib/pagination";
 import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 
@@ -42,7 +49,10 @@ export default async function AdminPaymentsPage({
 }: PaymentsPageProps) {
   const params = (await searchParams) ?? {};
   const page = parsePage(firstQueryValue(params.page));
-  const pageSize = parsePageSize(firstQueryValue(params.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(params.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const search = firstQueryValue(params.search);
   const status = firstQueryValue(params.status);
   const dateFrom = firstQueryValue(params.dateFrom);
@@ -56,6 +66,15 @@ export default async function AdminPaymentsPage({
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined
   });
+
+  const query = {
+    search: search || undefined,
+    status: status || undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    pageSize: String(pageSize)
+  };
+  const paginationBasePath = "/dashboard/admin/payments";
 
   const exportParams = new URLSearchParams();
   if (search) exportParams.set("search", search);
@@ -203,6 +222,23 @@ export default async function AdminPaymentsPage({
           )}
         </CardContent>
       </Card>
+
+      {data.rows.length ? (
+        <PaginationControls
+          nextHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.min(data.page + 1, data.pageCount)
+          )}
+          page={data.page}
+          pageCount={data.pageCount}
+          previousHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.max(data.page - 1, 1)
+          )}
+        />
+      ) : null}
     </div>
   );
 }

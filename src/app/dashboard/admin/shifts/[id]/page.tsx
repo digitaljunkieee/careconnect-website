@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/pagination-controls";
 import {
   Tabs,
   TabsContent,
@@ -20,9 +22,16 @@ import { formatDateTime } from "@/lib/format";
 import { ASSIGNMENT_STATUS_LABELS, SHIFT_STATUS_LABELS } from "@/lib/constants";
 import { ShiftActions } from "@/components/admin/shift-actions";
 import { getAdminShiftDetailData } from "@/lib/admin-platform";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  paginateItems,
+  parsePage
+} from "@/lib/pagination";
 
 type ShiftDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function EmptyState({ label }: { label: string }) {
@@ -33,15 +42,35 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
+function firstQueryValue(value: string | string[] | undefined, fallback = ""): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? fallback;
+  }
+
+  return value ?? fallback;
+}
+
 export default async function AdminShiftDetailPage({
-  params
+  params,
+  searchParams
 }: ShiftDetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
   const data = await getAdminShiftDetailData(id);
 
   if (!data) {
     notFound();
   }
+
+  const pageSize = getResponsivePageSize((await headers()).get("user-agent"));
+  const applicationsPage = parsePage(firstQueryValue(resolvedSearchParams.applicationsPage));
+  const defaultTab = firstQueryValue(resolvedSearchParams.tab, "overview");
+  const applications = paginateItems(data.applications, applicationsPage, pageSize);
+  const basePath = `/dashboard/admin/shifts/${id}`;
+  const query = {
+    applicationsPage: String(applications.page),
+    pageSize: String(pageSize)
+  };
 
   return (
     <div className="space-y-6">
@@ -91,10 +120,15 @@ export default async function AdminShiftDetailPage({
       </section>
 
       <div className="flex flex-wrap items-center gap-3">
-        <ShiftActions shiftId={data.shift.id} status={data.shift.status} workers={data.workers} />
+        <ShiftActions
+          applicationCount={data.shift.applicationCount}
+          shiftId={data.shift.id}
+          status={data.shift.status}
+          workers={data.workers}
+        />
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue={defaultTab === "applications" ? "applications" : "overview"} className="w-full">
         <TabsList className="flex flex-wrap justify-start gap-2 bg-transparent p-0">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
@@ -165,7 +199,7 @@ export default async function AdminShiftDetailPage({
               <CardDescription>Worker applications submitted for this shift.</CardDescription>
             </CardHeader>
             <CardContent>
-              {data.applications.length ? (
+              {applications.rows.length ? (
                 <div className="overflow-hidden rounded-3xl border border-border/60">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-left">
@@ -177,7 +211,7 @@ export default async function AdminShiftDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {data.applications.map((application) => (
+                      {applications.rows.map((application) => (
                         <tr key={application.id} className="border-t border-border/60">
                           <td className="px-4 py-4">{application.workerName}</td>
                           <td className="px-4 py-4">{application.workerEmail}</td>
@@ -193,6 +227,25 @@ export default async function AdminShiftDetailPage({
               ) : (
                   <EmptyState label="No workers have applied for this shift yet." />
               )}
+              {applications.rows.length ? (
+                <PaginationControls
+                  className="mt-4"
+                  nextHref={buildPageHref(
+                    basePath,
+                    query,
+                    Math.min(applications.page + 1, applications.pageCount),
+                    "applicationsPage"
+                  )}
+                  page={applications.page}
+                  pageCount={applications.pageCount}
+                  previousHref={buildPageHref(
+                    basePath,
+                    query,
+                    Math.max(applications.page - 1, 1),
+                    "applicationsPage"
+                  )}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,29 +1,18 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AdminWorkersTable } from "@/components/admin/admin-workers-table";
-import {
-  VERIFICATION_STATUSES,
-  VERIFICATION_STATUS_LABELS
-} from "@/lib/constants";
+import { VERIFICATION_STATUSES, VERIFICATION_STATUS_LABELS } from "@/lib/constants";
 import { getAdminWorkerListData } from "@/lib/admin-data";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import { getResponsivePageSize, parsePage, parsePageSize } from "@/lib/pagination";
 
 type WorkersPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function firstQueryValue(
-  value: string | string[] | undefined,
-  fallback = ""
-): string {
+function firstQueryValue(value: string | string[] | undefined, fallback = ""): string {
   if (Array.isArray(value)) {
     return value[0] ?? fallback;
   }
@@ -34,7 +23,10 @@ function firstQueryValue(
 export default async function AdminWorkersPage({ searchParams }: WorkersPageProps) {
   const params = (await searchParams) ?? {};
   const page = parsePage(firstQueryValue(params.page));
-  const pageSize = parsePageSize(firstQueryValue(params.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(params.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const search = firstQueryValue(params.search);
   const verificationStatus = firstQueryValue(params.verificationStatus);
   const activityStatus = firstQueryValue(params.activityStatus);
@@ -56,15 +48,18 @@ export default async function AdminWorkersPage({ searchParams }: WorkersPageProp
   return (
     <div className="space-y-6">
       <Card className="border-border/70">
-        <CardHeader>
+        <CardHeader className="space-y-2">
           <CardTitle>Workers</CardTitle>
-          <CardDescription>Search worker accounts and update their status.</CardDescription>
+          <CardDescription>Search worker accounts and keep their status current.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 lg:grid-cols-6" method="get">
+          <form
+            className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(11rem,12rem)_minmax(11rem,12rem)_auto]"
+            method="get"
+          >
             <input name="page" type="hidden" value="1" />
             <input name="pageSize" type="hidden" value={String(pageSize)} />
-            <div className="space-y-2 lg:col-span-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="search">
                 Search
               </label>
@@ -73,6 +68,7 @@ export default async function AdminWorkersPage({ searchParams }: WorkersPageProp
                 name="search"
                 placeholder="Worker name, email, or phone"
                 defaultValue={search}
+                className="h-10"
               />
             </div>
             <div className="space-y-2">
@@ -108,9 +104,9 @@ export default async function AdminWorkersPage({ searchParams }: WorkersPageProp
                 <option value="INACTIVE">Inactive</option>
               </select>
             </div>
-            <div className="flex items-end gap-3 lg:col-span-6">
+            <div className="flex items-end gap-2">
               <Button className="rounded-2xl" type="submit">
-                Search workers
+                Filter
               </Button>
               <Button asChild className="rounded-2xl" variant="outline">
                 <Link href="/dashboard/admin/workers">Reset</Link>

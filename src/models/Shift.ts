@@ -14,7 +14,10 @@ export interface ShiftDocument {
   startTime: string;
   endTime: string;
   hourlyRate: number;
+  roleCategory: string;
+  customRole?: string;
   roleRequired: string;
+  requiredQualifications: string;
   notes: string;
   status: ShiftStatus;
   paymentStatus: PaymentStatus;
@@ -49,10 +52,23 @@ const shiftSchema = new Schema<ShiftDocument>(
       required: true,
       min: 0
     },
+    roleCategory: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    customRole: {
+      type: String,
+      default: ""
+    },
     roleRequired: {
       type: String,
       required: true,
       trim: true
+    },
+    requiredQualifications: {
+      type: String,
+      default: ""
     },
     notes: {
       type: String,
@@ -77,6 +93,7 @@ const shiftSchema = new Schema<ShiftDocument>(
 shiftSchema.index({ status: 1, date: 1 });
 shiftSchema.index({ facilityId: 1, status: 1, date: 1 });
 shiftSchema.index({ roleRequired: 1, hourlyRate: 1, date: 1 });
+shiftSchema.index({ roleCategory: 1, customRole: 1, date: 1 });
 shiftSchema.index({ paymentStatus: 1, updatedAt: -1 });
 
 const Shift = getModel<ShiftDocument>("Shift", shiftSchema);

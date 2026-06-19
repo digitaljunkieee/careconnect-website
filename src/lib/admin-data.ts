@@ -124,6 +124,7 @@ export type AdminDashboardData = {
     openShifts: number;
     filledShifts: number;
     totalApplications: number;
+    applicationsToday: number;
     totalRevenue: number;
     pendingPayments: number;
   };
@@ -162,12 +163,14 @@ export type AdminDashboardData = {
 
 export type AdminWorkerRow = {
   id: string;
+  profileId: string;
   fullName: string;
   email: string;
   phone: string;
   roleType: WorkerRoleType;
   verificationStatus: VerificationStatus;
   isActive: boolean;
+  applications: number;
   registrationDate: string;
 };
 
@@ -187,6 +190,7 @@ export type AdminFacilityRow = {
   companyName: string;
   contactPerson: string;
   email: string;
+  openShifts: number;
   totalShifts: number;
   isActive: boolean;
   registrationDate: string;
@@ -326,6 +330,9 @@ function normalizeName(user?: Pick<LeanUser, "firstName" | "lastName" | "email">
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   await connectDB();
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const [
     totalWorkers,
     verifiedWorkers,
@@ -334,6 +341,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     openShifts,
     filledShifts,
     totalApplications,
+    applicationsToday,
     revenueAggregate,
     pendingPayments,
     recentWorkers,
@@ -353,6 +361,9 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     Shift.countDocuments({ status: "OPEN" }),
     Shift.countDocuments({ status: "FILLED" }),
     Application.countDocuments(),
+    Application.countDocuments({
+      createdAt: { $gte: todayStart }
+    }),
     PaymentLog.aggregate([{ $match: { status: "PAID" } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
     PaymentLog.countDocuments({ status: "PENDING" }),
     User.aggregate([
@@ -425,6 +436,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     number,
     number,
     number,
+    number,
     Array<{ total?: number }>,
     number,
     Array<LeanUser & { workerProfile?: LeanWorkerProfile }>,
@@ -444,6 +456,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       openShifts,
       filledShifts,
       totalApplications,
+      applicationsToday,
       totalRevenue,
       pendingPayments
     },
@@ -479,7 +492,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
         id: String(application._id),
         workerName: normalizeName(workerUser),
         facilityName: facility?.companyName ?? "Unknown facility",
-        shiftLabel: `${shift?.roleRequired ?? "Shift"} • ${shift?.date ? formatDate(shift.date) : "TBA"}`,
+        shiftLabel: `${shift?.roleRequired ?? "Shift"} - ${shift?.date ? formatDate(shift.date) : "TBA"}`,
         status: application.status ?? "PENDING",
         submittedAt: toIso(application.createdAt)
       };
@@ -523,60 +536,77 @@ export async function getAdminWorkerListData(filters: {
 
   const skip = getSkip(filters.page, filters.pageSize);
 
-  const [result] = (await User.aggregate([
-    { $match: match },
-    {
-      $lookup: {
-        from: "workerprofiles",
-        localField: "_id",
-        foreignField: "userId",
-        as: "workerProfile"
-      }
-    },
-    { $unwind: { path: "$workerProfile", preserveNullAndEmptyArrays: true } },
-    ...(filters.verificationStatus
-      ? [
-          {
-            $match: {
-              "workerProfile.verificationStatus": filters.verificationStatus
+  const [result, applicationCounts] = await Promise.all([
+    User.aggregate([
+      { $match: match },
+      {
+        $lookup: {
+          from: "workerprofiles",
+          localField: "_id",
+          foreignField: "userId",
+          as: "workerProfile"
+        }
+      },
+      { $unwind: { path: "$workerProfile", preserveNullAndEmptyArrays: true } },
+      ...(filters.verificationStatus
+        ? [
+            {
+              $match: {
+                "workerProfile.verificationStatus": filters.verificationStatus
+              }
             }
-          }
-        ]
-      : []),
-    ...(filters.activityStatus
-      ? [
-          {
-            $match: {
-              isActive: filters.activityStatus === "ACTIVE"
+          ]
+        : []),
+      ...(filters.activityStatus
+        ? [
+            {
+              $match: {
+                isActive: filters.activityStatus === "ACTIVE"
+              }
             }
-          }
-        ]
-      : []),
-    { $sort: { createdAt: -1, _id: -1 } },
-    {
-      $facet: {
-        items: [{ $skip: skip }, { $limit: filters.pageSize }],
-        total: [{ $count: "count" }]
+          ]
+        : []),
+      { $sort: { createdAt: -1, _id: -1 } },
+      {
+        $facet: {
+          items: [{ $skip: skip }, { $limit: filters.pageSize }],
+          total: [{ $count: "count" }]
+        }
       }
-    }
-  ])) as [
-    {
+    ]),
+    Application.aggregate([
+      {
+        $group: {
+          _id: "$workerId",
+          total: { $sum: 1 }
+        }
+      }
+    ])
+  ]) as [
+    Array<{
       items?: Array<LeanUser & { workerProfile?: LeanWorkerProfile }>;
       total?: Array<{ count?: number }>;
-    }
+    }>,
+    Array<{ _id: unknown; total?: number }>
   ];
 
-  const total = result?.total?.[0]?.count ?? 0;
+  const workerResult = result?.[0];
+  const total = workerResult?.total?.[0]?.count ?? 0;
+  const applicationCountMap = new Map(
+    applicationCounts.map((entry) => [String(entry._id), Number(entry.total ?? 0)])
+  );
 
   return {
-    rows: (result?.items ?? []).map((user) => ({
+    rows: (workerResult?.items ?? []).map((user) => ({
       id: String(user._id),
+      profileId: String(user.workerProfile?._id ?? ""),
       fullName: normalizeName(user),
       email: user.email ?? "",
       phone: user.phone ?? user.workerProfile?.phone ?? "",
       roleType: user.workerProfile?.roleType ?? "CARE_SUPPORT",
       verificationStatus: user.workerProfile?.verificationStatus ?? "PENDING",
       isActive: Boolean(user.isActive),
+      applications: applicationCountMap.get(String(user.workerProfile?._id ?? "")) ?? 0,
       registrationDate: toIso(user.createdAt)
     })),
     total,
@@ -702,7 +732,7 @@ export async function getAdminWorkerDetailData(workerUserId: string): Promise<Ad
         id: String(application._id),
         facilityName: facility?.companyName ?? "Unknown facility",
         shiftDate: shift?.date ? formatDate(shift.date) : "TBA",
-        shiftLabel: `${shift?.roleRequired ?? "Shift"} • ${shift?.date ? formatDate(shift.date) : "TBA"}`,
+        shiftLabel: `${shift?.roleRequired ?? "Shift"} - ${shift?.date ? formatDate(shift.date) : "TBA"}`,
         status: application.status ?? "PENDING",
         submittedAt: toIso(application.createdAt)
       };
@@ -874,7 +904,17 @@ export async function getAdminFacilityListData(filters: {
               $expr: { $eq: ["$facilityId", "$$facilityProfileId"] }
             }
           },
-          { $group: { _id: null, total: { $sum: 1 } } }
+          {
+            $group: {
+              _id: null,
+              total: { $sum: 1 },
+              openShifts: {
+                $sum: {
+                  $cond: [{ $eq: ["$status", "OPEN"] }, 1, 0]
+                }
+              }
+            }
+          }
         ],
         as: "shiftTotals"
       }
@@ -890,7 +930,12 @@ export async function getAdminFacilityListData(filters: {
 
   const [result] = (await FacilityProfile.aggregate(pipeline)) as [
     {
-      items?: Array<LeanFacilityProfile & { user?: LeanUser; shiftTotals?: Array<{ total?: number }> }>;
+      items?: Array<
+        LeanFacilityProfile & {
+          user?: LeanUser;
+          shiftTotals?: Array<{ total?: number; openShifts?: number }>;
+        }
+      >;
       total?: Array<{ count?: number }>;
     }
   ];
@@ -903,6 +948,7 @@ export async function getAdminFacilityListData(filters: {
       companyName: profile.companyName ?? "",
       contactPerson: normalizeName(profile.user),
       email: profile.user?.email ?? "",
+      openShifts: profile.shiftTotals?.[0]?.openShifts ?? 0,
       totalShifts: profile.shiftTotals?.[0]?.total ?? 0,
       isActive: Boolean(profile.user?.isActive),
       registrationDate: toIso(profile.createdAt)
@@ -1010,7 +1056,7 @@ export async function getAdminFacilityDetailData(facilityUserId: string): Promis
         return {
           id: String(application._id),
           workerName: normalizeName(workerUser),
-          shiftLabel: `${shift?.roleRequired ?? "Shift"} • ${shift?.date ? formatDate(shift.date) : "TBA"}`,
+          shiftLabel: `${shift?.roleRequired ?? "Shift"} - ${shift?.date ? formatDate(shift.date) : "TBA"}`,
           status: application.status ?? "PENDING",
           submittedAt: toIso(application.createdAt)
         };

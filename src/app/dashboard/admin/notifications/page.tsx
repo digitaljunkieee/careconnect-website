@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,13 +10,22 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/pagination-controls";
 import {
   MarkAllNotificationsButton,
   NotificationRowActions
 } from "@/components/admin/notification-actions";
 import { getAdminNotificationListData } from "@/lib/admin-platform";
-import { parsePage, parsePageSize } from "@/lib/pagination";
-import { NOTIFICATION_TYPES } from "@/lib/constants";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  parsePage,
+  parsePageSize
+} from "@/lib/pagination";
+import {
+  NOTIFICATION_TYPE_LABELS,
+  NOTIFICATION_TYPES
+} from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 
 type NotificationsPageProps = {
@@ -46,7 +56,10 @@ export default async function AdminNotificationsPage({
 }: NotificationsPageProps) {
   const params = (await searchParams) ?? {};
   const page = parsePage(firstQueryValue(params.page));
-  const pageSize = parsePageSize(firstQueryValue(params.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(params.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const search = firstQueryValue(params.search);
   const type = firstQueryValue(params.type);
   const readStatus = firstQueryValue(params.readStatus);
@@ -61,6 +74,14 @@ export default async function AdminNotificationsPage({
         ? (readStatus as "READ" | "UNREAD")
         : undefined
   });
+
+  const query = {
+    search: search || undefined,
+    type: type || undefined,
+    readStatus: readStatus || undefined,
+    pageSize: String(pageSize)
+  };
+  const paginationBasePath = "/dashboard/admin/notifications";
 
   return (
     <div className="space-y-6">
@@ -125,7 +146,7 @@ export default async function AdminNotificationsPage({
                 <option value="ALL">All</option>
                 {NOTIFICATION_TYPES.map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {NOTIFICATION_TYPE_LABELS[item]}
                   </option>
                 ))}
               </select>
@@ -192,7 +213,9 @@ export default async function AdminNotificationsPage({
                         <div className="text-xs text-muted-foreground">{row.userEmail}</div>
                       </td>
                       <td className="px-4 py-4">
-                        <Badge variant="outline">{row.type}</Badge>
+                        <Badge variant="outline">
+                          {NOTIFICATION_TYPE_LABELS[row.type]}
+                        </Badge>
                       </td>
                       <td className="px-4 py-4">{formatDateTime(row.createdAt)}</td>
                       <td className="px-4 py-4">
@@ -216,6 +239,23 @@ export default async function AdminNotificationsPage({
           )}
         </CardContent>
       </Card>
+
+      {data.rows.length ? (
+        <PaginationControls
+          nextHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.min(data.page + 1, data.pageCount)
+          )}
+          page={data.page}
+          pageCount={data.pageCount}
+          previousHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.max(data.page - 1, 1)
+          )}
+        />
+      ) : null}
     </div>
   );
 }

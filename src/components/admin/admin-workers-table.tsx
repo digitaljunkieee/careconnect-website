@@ -9,7 +9,7 @@ import {
   VERIFICATION_STATUS_LABELS,
   WORKER_ROLE_TYPE_LABELS
 } from "@/lib/constants";
-import { EntityToggleActions } from "@/components/admin/entity-toggle-actions";
+import { WorkerReviewDrawer } from "@/components/admin/worker-review-drawer";
 
 type AdminWorkersTableProps = {
   rows: AdminWorkerRow[];
@@ -63,6 +63,11 @@ export function AdminWorkersTable({
       )
     },
     {
+      accessorKey: "applications",
+      header: "Applications",
+      cell: ({ row }) => row.original.applications
+    },
+    {
       accessorKey: "isActive",
       header: "Active Status",
       cell: ({ row }) => (
@@ -80,11 +85,15 @@ export function AdminWorkersTable({
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <EntityToggleActions
-          viewHref={`/dashboard/admin/workers/${row.original.id}`}
-          endpoint={`/api/admin/workers/${row.original.id}`}
-          entityLabel="Worker"
+        <WorkerReviewDrawer
+          email={row.original.email}
           isActive={row.original.isActive}
+          phone={row.original.phone}
+          profileId={row.original.profileId}
+          roleType={row.original.roleType}
+          verificationStatus={row.original.verificationStatus}
+          workerId={row.original.id}
+          workerName={row.original.fullName}
         />
       )
     }

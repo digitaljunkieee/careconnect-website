@@ -1,35 +1,100 @@
 import type { ClientSession } from "mongoose";
 import { connectDB } from "@/lib/mongodb";
+import { paginateItems } from "@/lib/pagination";
 import User from "@/models/User";
 import Notification from "@/models/Notification";
-import type { NotificationType } from "@/lib/constants";
+import { NOTIFICATION_TYPES, type NotificationRecipientRole, type NotificationType } from "@/lib/constants";
 
-type CreateNotificationInput = {
-  userId: string;
+type NotificationPayloadInput = {
+  recipientRole: NotificationRecipientRole;
   title: string;
   message: string;
   type?: NotificationType;
+  actionUrl?: string;
 };
 
-type BulkNotificationInput = Omit<CreateNotificationInput, "userId">;
+export type CreateNotificationInput = NotificationPayloadInput & {
+  recipient: string;
+};
+
+type BulkNotificationInput = NotificationPayloadInput;
+
+export type NotificationReadStatus = "ALL" | "READ" | "UNREAD";
+
+export type NotificationFeedItem = {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  actionUrl: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NotificationListData = {
+  rows: NotificationFeedItem[];
+  total: number;
+  unreadTotal: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+
+function getRecipientQuery(recipientId: string) {
+  return {
+    $or: [{ recipient: recipientId }, { userId: recipientId }]
+  };
+}
+
+function normalizeNotificationType(value?: string): NotificationType {
+  return NOTIFICATION_TYPES.includes(value as NotificationType)
+    ? (value as NotificationType)
+    : "system";
+}
+
+function mapNotification(notification: {
+  _id: unknown;
+  title?: string;
+  message?: string;
+  type?: NotificationType;
+  actionUrl?: string;
+  isRead?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}) {
+  return {
+    id: String(notification._id),
+    title: notification.title ?? "",
+    message: notification.message ?? "",
+    type: normalizeNotificationType(notification.type),
+    actionUrl: notification.actionUrl ?? "",
+    isRead: Boolean(notification.isRead),
+    createdAt: notification.createdAt?.toISOString?.() ?? new Date().toISOString(),
+    updatedAt: notification.updatedAt?.toISOString?.() ?? new Date().toISOString()
+  };
+}
 
 async function createNotificationPayloads(
-  userIds: string[],
+  recipientIds: string[],
   input: BulkNotificationInput,
   session?: ClientSession
 ) {
   await connectDB();
 
-  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
-  if (uniqueUserIds.length === 0) {
+  const uniqueRecipientIds = [...new Set(recipientIds.filter(Boolean))];
+  if (uniqueRecipientIds.length === 0) {
     return [];
   }
 
-  const payloads = uniqueUserIds.map((userId) => ({
-    userId,
+  const payloads = uniqueRecipientIds.map((recipient) => ({
+    recipient,
+    recipientRole: input.recipientRole,
+    userId: recipient,
     title: input.title,
     message: input.message,
-    type: input.type ?? "INFO",
+    type: input.type ?? "system",
+    actionUrl: input.actionUrl?.trim() ?? "",
     isRead: false
   }));
 
@@ -44,19 +109,27 @@ export async function createNotification(
   input: CreateNotificationInput,
   session?: ClientSession
 ) {
-  return createNotificationPayloads([input.userId], input, session);
+  return createNotificationPayloads([input.recipient], input, session);
 }
 
 export async function notifyUsers(
-  userIds: string[],
-  input: BulkNotificationInput,
+  recipientIds: string[],
+  recipientRole: NotificationRecipientRole,
+  input: Omit<BulkNotificationInput, "recipientRole">,
   session?: ClientSession
 ) {
-  return createNotificationPayloads(userIds, input, session);
+  return createNotificationPayloads(
+    recipientIds,
+    {
+      ...input,
+      recipientRole
+    },
+    session
+  );
 }
 
 export async function notifyAdmins(
-  input: BulkNotificationInput,
+  input: Omit<BulkNotificationInput, "recipientRole">,
   session?: ClientSession
 ) {
   await connectDB();
@@ -65,11 +138,107 @@ export async function notifyAdmins(
     .select("_id")
     .lean();
 
-  return createNotificationPayloads(
+  return notifyUsers(
     admins.map((admin) => String(admin._id)),
+    "admin",
     input,
     session
   );
+}
+
+export async function getUserNotificationsData(
+  recipientId: string,
+  filters: {
+    page: number;
+    pageSize: number;
+    readStatus?: NotificationReadStatus;
+  }
+): Promise<NotificationListData> {
+  await connectDB();
+
+  const notifications = await Notification.find(getRecipientQuery(recipientId))
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const unreadTotal = notifications.filter((notification) => !notification.isRead).length;
+
+  const mapped = notifications
+    .map(mapNotification)
+    .filter((notification) => {
+      if (filters.readStatus === "READ") {
+        return notification.isRead;
+      }
+
+      if (filters.readStatus === "UNREAD") {
+        return !notification.isRead;
+      }
+
+      return true;
+    });
+
+  const paginated = paginateItems(mapped, filters.page, filters.pageSize);
+
+  return {
+    rows: paginated.rows,
+    total: paginated.total,
+    unreadTotal,
+    page: paginated.page,
+    pageSize: filters.pageSize,
+    pageCount: paginated.pageCount
+  };
+}
+
+export async function getUnreadNotificationCount(recipientId: string) {
+  await connectDB();
+
+  return Notification.countDocuments({
+    ...getRecipientQuery(recipientId),
+    isRead: false
+  });
+}
+
+export async function markNotificationAsRead(
+  recipientId: string,
+  notificationId: string
+) {
+  await connectDB();
+
+  const result = await Notification.findOneAndUpdate(
+    {
+      _id: notificationId,
+      ...getRecipientQuery(recipientId)
+    },
+    {
+      $set: {
+        isRead: true
+      }
+    },
+    { new: true }
+  ).lean();
+
+  return {
+    updated: Boolean(result)
+  };
+}
+
+export async function markAllNotificationsAsRead(recipientId: string) {
+  await connectDB();
+
+  const result = await Notification.updateMany(
+    {
+      ...getRecipientQuery(recipientId),
+      isRead: false
+    },
+    {
+      $set: {
+        isRead: true
+      }
+    }
+  );
+
+  return {
+    updated: result.modifiedCount
+  };
 }
 
 export async function notifyWorkerApplicationSubmitted(
@@ -77,12 +246,17 @@ export async function notifyWorkerApplicationSubmitted(
   shiftTitle: string,
   session?: ClientSession
 ) {
-  return createNotification({
-    userId: workerUserId,
-    title: "Shift application submitted",
-    message: `Your application for ${shiftTitle} has been received.`,
-    type: "SUCCESS"
-  }, session);
+  return createNotification(
+    {
+      recipient: workerUserId,
+      recipientRole: "worker",
+      title: "Application submitted",
+      message: `Your application for ${shiftTitle} is in review.`,
+      type: "application",
+      actionUrl: "/dashboard/worker/applications"
+    },
+    session
+  );
 }
 
 export async function notifyWorkerApplicationDecision(
@@ -91,18 +265,23 @@ export async function notifyWorkerApplicationDecision(
   decision: "ACCEPTED" | "REJECTED",
   session?: ClientSession
 ) {
-  return createNotification({
-    userId: workerUserId,
-    title:
-      decision === "ACCEPTED"
-        ? "Application accepted"
-        : "Application rejected",
-    message:
-      decision === "ACCEPTED"
-        ? `Good news. Your application for ${shiftTitle} was accepted.`
-        : `Your application for ${shiftTitle} was not selected.`,
-    type: decision === "ACCEPTED" ? "SUCCESS" : "WARNING"
-  }, session);
+  return createNotification(
+    {
+      recipient: workerUserId,
+      recipientRole: "worker",
+      title:
+        decision === "ACCEPTED"
+          ? "Application accepted"
+          : "Application rejected",
+      message:
+        decision === "ACCEPTED"
+          ? `Your application for ${shiftTitle} was accepted.`
+          : `Your application for ${shiftTitle} was not selected.`,
+      type: "application",
+      actionUrl: "/dashboard/worker/applications"
+    },
+    session
+  );
 }
 
 export async function notifyFacilityNewApplication(
@@ -111,10 +290,69 @@ export async function notifyFacilityNewApplication(
   workerName: string,
   session?: ClientSession
 ) {
-  return createNotification({
-    userId: facilityUserId,
-    title: "New application received",
-    message: `${workerName} has applied for ${shiftTitle}.`,
-    type: "INFO"
-  }, session);
+  return createNotification(
+    {
+      recipient: facilityUserId,
+      recipientRole: "facility",
+      title: "New application",
+      message: `${workerName} applied for ${shiftTitle}.`,
+      type: "application",
+      actionUrl: "/dashboard/facility/applicants"
+    },
+    session
+  );
+}
+
+export async function notifyFacilityShiftCreated(
+  facilityUserId: string,
+  shiftTitle: string,
+  session?: ClientSession
+) {
+  return createNotification(
+    {
+      recipient: facilityUserId,
+      recipientRole: "facility",
+      title: "Shift created",
+      message: `${shiftTitle} is now live.`,
+      type: "shift",
+      actionUrl: "/dashboard/facility/shifts"
+    },
+    session
+  );
+}
+
+export async function notifyFacilityShiftFilled(
+  facilityUserId: string,
+  shiftTitle: string,
+  session?: ClientSession
+) {
+  return createNotification(
+    {
+      recipient: facilityUserId,
+      recipientRole: "facility",
+      title: "Shift filled",
+      message: `${shiftTitle} now has an assigned worker.`,
+      type: "shift",
+      actionUrl: "/dashboard/facility/shifts"
+    },
+    session
+  );
+}
+
+export async function notifyWorkerShiftCompleted(
+  workerUserId: string,
+  shiftTitle: string,
+  session?: ClientSession
+) {
+  return createNotification(
+    {
+      recipient: workerUserId,
+      recipientRole: "worker",
+      title: "Shift completed",
+      message: `Your shift for ${shiftTitle} is marked complete.`,
+      type: "shift",
+      actionUrl: "/dashboard/worker/assignments"
+    },
+    session
+  );
 }

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { jsonError, jsonSuccess, getErrorStatus } from "@/lib/api";
 import { adminWorkerStatusSchema } from "@/lib/validators/admin";
-import { setWorkerActivationStatus } from "@/lib/admin-actions";
+import { deleteWorkerAccount, setWorkerActivationStatus } from "@/lib/admin-actions";
 
 type RouteParams = {
   params: Promise<{ workerId: string }>;
@@ -30,6 +30,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Unable to update worker.",
+      getErrorStatus(error)
+    );
+  }
+}
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  try {
+    const admin = await requireSessionUser(["ADMIN"]);
+
+    if (!admin?.id) {
+      return jsonError("Unauthorized.", 401);
+    }
+
+    const { workerId } = await params;
+    const result = await deleteWorkerAccount(admin.id, workerId);
+
+    return jsonSuccess(result, "Worker deleted.");
+  } catch (error) {
+    return jsonError(
+      error instanceof Error ? error.message : "Unable to delete worker.",
       getErrorStatus(error)
     );
   }

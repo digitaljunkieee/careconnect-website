@@ -9,6 +9,7 @@ import type {
   VerificationStatus
 } from "@/lib/constants";
 import { formatCurrency, formatDate, formatName } from "@/lib/format";
+import { inferShiftRoleFields } from "@/lib/shift-roles";
 import { getSkip } from "@/lib/pagination";
 
 type LeanUser = {
@@ -44,7 +45,10 @@ type FacilityShiftItem = {
   startTime?: string;
   endTime?: string;
   hourlyRate?: number;
+  roleCategory?: string;
+  customRole?: string;
   roleRequired?: string;
+  requiredQualifications?: string;
   notes?: string;
   status: ShiftStatus;
 };
@@ -54,6 +58,8 @@ type ShiftSummaryItem = {
   date?: Date;
   startTime?: string;
   endTime?: string;
+  roleCategory?: string;
+  customRole?: string;
   roleRequired?: string;
   status?: ShiftStatus;
 };
@@ -94,7 +100,11 @@ export type FacilityDashboardData = {
   companyName: string;
   openShiftsCount: number;
   filledShiftsCount: number;
+  filledThisWeekCount: number;
   pendingApplicationsCount: number;
+  profileCompletionPercent: number;
+  upcomingShiftsPage: number;
+  upcomingShiftsPageCount: number;
   upcomingShifts: Array<{
     id: string;
     date: string;
@@ -132,6 +142,13 @@ export type ApplicantRow = {
   roleType: string;
   appliedAt: string;
   shiftLabel?: string;
+};
+
+export type FacilityApplicantSummaryCounts = {
+  pendingReviewCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  totalCount: number;
 };
 
 function normalizeText(value: string | undefined) {
@@ -179,6 +196,36 @@ async function getFacilityContext(userId: string) {
   return { user, profile };
 }
 
+function getFacilityProfileCompletionPercent(
+  profile: LeanFacilityProfile | null,
+  user: LeanUser | null
+) {
+  const completionChecks = [
+    Boolean(user?.avatarUrl?.trim()),
+    Boolean(profile?.companyName?.trim()),
+    Boolean(profile?.address?.trim()),
+    Boolean(profile?.contactNumber?.trim()),
+    Boolean(profile?.website?.trim()),
+    Boolean(profile?.facilityType?.trim()),
+    Boolean(profile?.description?.trim())
+  ];
+
+  return Math.round(
+    (completionChecks.filter(Boolean).length / completionChecks.length) * 100
+  );
+}
+
+function getStartOfCurrentWeekUtc(date = new Date()) {
+  const start = new Date(date);
+  const day = start.getUTCDay();
+  const offset = (day + 6) % 7;
+
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - offset);
+
+  return start;
+}
+
 export async function getFacilityProfileData(userId: string) {
   await connectDB();
 
@@ -205,37 +252,70 @@ export async function getFacilityProfileData(userId: string) {
   } satisfies FacilityProfileData;
 }
 
-export async function getFacilityDashboardData(userId: string) {
+export async function getFacilityDashboardData(
+  userId: string,
+  options?: {
+    upcomingPage?: number;
+    upcomingPageSize?: number;
+  }
+) {
   await connectDB();
 
-  const { profile } = await getFacilityContext(userId);
+  const { user, profile } = await getFacilityContext(userId);
   if (!profile) {
     return null;
   }
 
-  const [openShiftsCount, filledShiftsCount, shifts, pendingApplicationsCount] =
+  const upcomingPageSize = Math.max(options?.upcomingPageSize ?? 5, 1);
+  const requestedUpcomingPage = Math.max(options?.upcomingPage ?? 1, 1);
+
+  const startOfWeek = getStartOfCurrentWeekUtc();
+  const startOfNextWeek = new Date(startOfWeek);
+  startOfNextWeek.setUTCDate(startOfNextWeek.getUTCDate() + 7);
+
+  const [openShiftsCount, filledShiftsCount, filledThisWeekCount, pendingApplicationsCount, upcomingShiftsTotal] =
     await Promise.all([
       Shift.countDocuments({ facilityId: profile._id, status: "OPEN" }),
       Shift.countDocuments({ facilityId: profile._id, status: "FILLED" }),
-      (await Shift.find({ facilityId: profile._id })
-        .sort({ date: 1 })
-        .limit(3)
-        .lean()) as FacilityShiftItem[],
+      Shift.countDocuments({
+        facilityId: profile._id,
+        status: "FILLED",
+        updatedAt: {
+          $gte: startOfWeek,
+          $lt: startOfNextWeek
+        }
+      }),
       (async () => {
         const shiftIds = await Shift.find({ facilityId: profile._id }).distinct("_id");
         return Application.countDocuments({
           shiftId: { $in: shiftIds },
           status: "PENDING"
         });
-      })()
+      })(),
+      Shift.countDocuments({ facilityId: profile._id })
     ]);
+
+  const upcomingShiftsPageCount = Math.max(
+    Math.ceil(upcomingShiftsTotal / upcomingPageSize),
+    1
+  );
+  const upcomingShiftsPage = Math.min(requestedUpcomingPage, upcomingShiftsPageCount);
+  const upcomingShifts = (await Shift.find({ facilityId: profile._id })
+    .sort({ date: 1, createdAt: 1 })
+    .skip(getSkip(upcomingShiftsPage, upcomingPageSize))
+    .limit(upcomingPageSize)
+    .lean()) as FacilityShiftItem[];
 
   return {
     companyName: profile.companyName ?? "",
     openShiftsCount,
     filledShiftsCount,
+    filledThisWeekCount,
     pendingApplicationsCount,
-    upcomingShifts: shifts.map((shift) => ({
+    profileCompletionPercent: getFacilityProfileCompletionPercent(profile, user),
+    upcomingShiftsPage,
+    upcomingShiftsPageCount,
+    upcomingShifts: upcomingShifts.map((shift) => ({
       id: String(shift._id),
       date: shift.date ? new Date(shift.date).toISOString() : new Date().toISOString(),
       roleRequired: shift.roleRequired ?? "",
@@ -270,6 +350,8 @@ export async function getFacilityShiftListData(
   if (search) {
     match.$or = [
       { roleRequired: { $regex: new RegExp(search, "i") } },
+      { roleCategory: { $regex: new RegExp(search, "i") } },
+      { customRole: { $regex: new RegExp(search, "i") } },
       { notes: { $regex: new RegExp(search, "i") } }
     ];
   }
@@ -460,6 +542,12 @@ export async function getFacilityApplicantListData(
   const shiftIds = await Shift.find({ facilityId: profile._id }).distinct("_id");
   if (!shiftIds.length) {
     return {
+      summaryCounts: {
+        pendingReviewCount: 0,
+        approvedCount: 0,
+        rejectedCount: 0,
+        totalCount: 0
+      },
       rows: [],
       total: 0,
       page: filters.page,
@@ -495,6 +583,31 @@ export async function getFacilityApplicantListData(
   ];
 
   const search = normalizeSearch(filters.search);
+  const summaryCounts = applications.reduce<FacilityApplicantSummaryCounts>(
+    (counts, application) => {
+      counts.totalCount += 1;
+
+      if (application.status === "PENDING") {
+        counts.pendingReviewCount += 1;
+      }
+
+      if (application.status === "ACCEPTED") {
+        counts.approvedCount += 1;
+      }
+
+      if (application.status === "REJECTED") {
+        counts.rejectedCount += 1;
+      }
+
+      return counts;
+    },
+    {
+      pendingReviewCount: 0,
+      approvedCount: 0,
+      rejectedCount: 0,
+      totalCount: 0
+    }
+  );
 
   const filtered = applications
     .map((application) => {
@@ -545,6 +658,7 @@ export async function getFacilityApplicantListData(
   const { rows, total, pageCount } = paginate(filtered, filters.page, filters.pageSize);
 
   return {
+    summaryCounts,
     rows: rows.map(({ sortDate, ...row }) => {
       void sortDate;
       return row;
@@ -573,13 +687,22 @@ export async function getFacilityShiftById(userId: string, shiftId: string) {
     return null;
   }
 
+  const roleFields = inferShiftRoleFields({
+    roleCategory: shift.roleCategory,
+    customRole: shift.customRole,
+    roleRequired: shift.roleRequired
+  });
+
   return {
     id: String(shift._id),
     date: shift.date ? new Date(shift.date).toISOString() : new Date().toISOString(),
     startTime: shift.startTime,
     endTime: shift.endTime,
     hourlyRate: shift.hourlyRate,
-    roleRequired: shift.roleRequired,
+    roleCategory: roleFields.roleCategory,
+    customRole: roleFields.customRole,
+    roleRequired: roleFields.roleRequired,
+    requiredQualifications: shift.requiredQualifications ?? "",
     notes: shift.notes ?? "",
     status: shift.status
   };

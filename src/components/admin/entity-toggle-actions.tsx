@@ -11,6 +11,7 @@ type EntityToggleActionsProps = {
   endpoint: string;
   entityLabel: string;
   isActive: boolean;
+  deleteEndpoint?: string;
 };
 
 async function parseApiError(response: Response) {
@@ -25,7 +26,8 @@ export function EntityToggleActions({
   viewHref,
   endpoint,
   entityLabel,
-  isActive
+  isActive,
+  deleteEndpoint
 }: EntityToggleActionsProps) {
   const router = useRouter();
   const nextState = isActive ? "disable" : "enable";
@@ -65,6 +67,30 @@ export function EntityToggleActions({
       >
         {isActive ? "Disable" : "Enable"}
       </ConfirmationActionButton>
+      {deleteEndpoint ? (
+        <ConfirmationActionButton
+          confirmLabel="Delete"
+          confirmVariant="destructive"
+          description={`This will permanently delete the ${entityLabel.toLowerCase()} account and related records.`}
+          onConfirm={async () => {
+            const response = await fetch(deleteEndpoint, {
+              method: "DELETE"
+            });
+
+            if (!response.ok) {
+              throw new Error(await parseApiError(response));
+            }
+
+            toast.success(`${entityLabel} deleted.`);
+            router.refresh();
+          }}
+          title={`Delete ${entityLabel}?`}
+          triggerClassName="rounded-2xl"
+          triggerVariant="outline"
+        >
+          Delete
+        </ConfirmationActionButton>
+      ) : null}
     </div>
   );
 }

@@ -288,29 +288,39 @@ async function notifyPaymentParties(
   facilityUserId: string,
   adminMessage: string,
   facilityMessage: string,
-  type: "SUCCESS" | "WARNING" | "INFO" = "INFO",
   session?: mongoose.ClientSession
 ) {
   if (facilityUserId) {
-    await createNotification(
+    try {
+      await createNotification(
+        {
+          recipient: facilityUserId,
+          recipientRole: "facility",
+          title: "Payment update",
+          message: facilityMessage,
+          type: "payment",
+          actionUrl: "/dashboard/facility/shifts"
+        },
+        session
+      );
+    } catch (error) {
+      console.warn("Failed to notify facility about payment update:", error);
+    }
+  }
+
+  try {
+    await notifyAdmins(
       {
-        userId: facilityUserId,
         title: "Payment update",
-        message: facilityMessage,
-        type
+        message: adminMessage,
+        type: "payment",
+        actionUrl: "/dashboard/admin/payments"
       },
       session
     );
+  } catch (error) {
+    console.warn("Failed to notify admins about payment update:", error);
   }
-
-  await notifyAdmins(
-    {
-      title: "Payment update",
-      message: adminMessage,
-      type: "INFO"
-    },
-    session
-  );
 }
 
 export async function createStripeCheckoutSession(
@@ -398,8 +408,7 @@ export async function handleStripeCheckoutCompleted(
   await notifyPaymentParties(
     facilityUserId,
     `A Stripe checkout for ${facilityName} was completed.`,
-    `Your payment for ${facilityName} has been confirmed.`,
-    "SUCCESS"
+    `Your payment for ${facilityName} has been confirmed.`
   );
 
   if (adminId) {
@@ -446,8 +455,7 @@ export async function handleStripePaymentFailure(
   await notifyPaymentParties(
     facilityUserId,
     `A payment attempt for ${facilityName} failed.`,
-    `We could not complete the payment for ${facilityName}. Please try again.`,
-    "WARNING"
+    `We could not complete the payment for ${facilityName}. Please try again.`
   );
 
   if (adminId) {
@@ -493,8 +501,7 @@ export async function handleStripeRefund(
   await notifyPaymentParties(
     facilityUserId,
     `A payment refund was processed for ${facilityName}.`,
-    `A refund was issued for your payment to ${facilityName}.`,
-    "WARNING"
+    `A refund was issued for your payment to ${facilityName}.`
   );
 
   if (adminId) {

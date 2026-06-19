@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,10 +10,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/pagination-controls";
 import { VerificationDecisionDialog } from "@/components/admin/verification-decision-dialog";
 import { VERIFICATION_STATUS_LABELS } from "@/lib/constants";
 import { getAdminVerificationQueueData } from "@/lib/admin-data";
-import { parsePage, parsePageSize } from "@/lib/pagination";
+import {
+  buildPageHref,
+  getResponsivePageSize,
+  parsePage,
+  parsePageSize
+} from "@/lib/pagination";
 
 type VerificationQueuePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -42,7 +49,10 @@ export default async function AdminVerificationQueuePage({
 }: VerificationQueuePageProps) {
   const params = (await searchParams) ?? {};
   const page = parsePage(firstQueryValue(params.page));
-  const pageSize = parsePageSize(firstQueryValue(params.pageSize), 10);
+  const pageSize = parsePageSize(
+    firstQueryValue(params.pageSize),
+    getResponsivePageSize((await headers()).get("user-agent"))
+  );
   const search = firstQueryValue(params.search);
   const status = firstQueryValue(params.status);
   const sort = firstQueryValue(params.sort, "oldest") as "oldest" | "newest";
@@ -55,45 +65,65 @@ export default async function AdminVerificationQueuePage({
     sort
   });
 
+  const query = {
+    search: search || undefined,
+    status: status || undefined,
+    sort: sort || undefined,
+    pageSize: String(pageSize)
+  };
+  const paginationBasePath = "/dashboard/admin/verifications";
+  const summary = {
+    pending: data.rows.filter((row) => row.currentStatus === "PENDING").length,
+    inReview: data.rows.filter((row) => row.currentStatus === "IN_REVIEW").length,
+    verified: data.rows.filter((row) => row.currentStatus === "VERIFIED").length,
+    rejected: data.rows.filter((row) => row.currentStatus === "REJECTED").length
+  };
+
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.total}</CardTitle>
-            <CardDescription>Total queue items</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.page}</CardTitle>
-            <CardDescription>Current page</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.pageCount}</CardTitle>
-            <CardDescription>Total pages</CardDescription>
-          </CardHeader>
-        </Card>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ["Pending", summary.pending],
+          ["In review", summary.inReview],
+          ["Verified", summary.verified],
+          ["Rejected", summary.rejected]
+        ].map(([label, value]) => (
+          <Card key={label} className="border-border/70">
+            <CardContent className="p-4">
+              <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                {label}
+              </div>
+              <div className="mt-2 text-3xl font-semibold">{value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </section>
 
       <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle>Verification Queue</CardTitle>
-          <CardDescription>
-            Search by worker name, sort oldest to newest, and process approvals with notes.
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <CardTitle>Verification queue</CardTitle>
+            <CardDescription>Search by worker name and review requests quickly.</CardDescription>
+          </div>
+          <Button asChild className="rounded-2xl" variant="outline" size="sm">
+            <Link href="/dashboard/admin/workers">View workers</Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 lg:grid-cols-6" method="get">
+          <form className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(11rem,12rem)_minmax(10rem,10rem)_auto]" method="get">
             <input name="page" type="hidden" value="1" />
             <input name="pageSize" type="hidden" value={String(pageSize)} />
-            <div className="space-y-2 lg:col-span-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="search">
                 Search
               </label>
-              <Input id="search" name="search" placeholder="Worker name or email" defaultValue={search} />
+              <Input
+                id="search"
+                name="search"
+                placeholder="Worker name or email"
+                defaultValue={search}
+                className="h-10"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="status">
@@ -126,9 +156,9 @@ export default async function AdminVerificationQueuePage({
                 <option value="newest">Newest</option>
               </select>
             </div>
-            <div className="flex items-end gap-3 lg:col-span-6">
+            <div className="flex items-end gap-2">
               <Button className="rounded-2xl" type="submit">
-                Apply filters
+                Filter
               </Button>
               <Button asChild className="rounded-2xl" variant="outline">
                 <Link href="/dashboard/admin/verifications">Reset</Link>
@@ -201,6 +231,23 @@ export default async function AdminVerificationQueuePage({
           )}
         </CardContent>
       </Card>
+
+      {data.rows.length ? (
+        <PaginationControls
+          nextHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.min(data.page + 1, data.pageCount)
+          )}
+          page={data.page}
+          pageCount={data.pageCount}
+          previousHref={buildPageHref(
+            paginationBasePath,
+            query,
+            Math.max(data.page - 1, 1)
+          )}
+        />
+      ) : null}
     </div>
   );
 }
