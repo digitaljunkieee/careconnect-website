@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { ArrowUpRight, CalendarDays, Users, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +6,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { AssignWorkerDialog } from "@/components/admin/assign-worker-dialog";
 import { getAdminShiftListData } from "@/lib/admin-platform";
 import { buildPageHref, getResponsivePageSize, parsePage, parsePageSize } from "@/lib/pagination";
-import { SHIFT_STATUS_LABELS, WORKER_ROLE_TYPE_LABELS } from "@/lib/constants";
+import { SHIFT_STATUS_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 
 type AssignmentsPageProps = {

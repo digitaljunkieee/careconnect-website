@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Script from "next/script";
-import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { auth } from "@/auth";
 import { Providers } from "@/components/providers/providers";
 import "./globals.css";
 
-const sans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "500", "600", "700"]
-});
-
-const display = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600", "700"]
-});
+const fontVariables = {
+  "--font-sans":
+    '"Segoe UI", Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
+  "--font-display":
+    '"Trebuchet MS", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif'
+} as CSSProperties;
 
 export const metadata: Metadata = {
   title: {
@@ -60,9 +54,9 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${display.variable}`}
+      style={fontVariables}
     >
-      <body className="font-sans">
+      <body className="font-sans antialiased">
         <Script id="dashboard-theme-bootstrap" strategy="beforeInteractive">
           {dashboardThemeBootstrap}
         </Script>

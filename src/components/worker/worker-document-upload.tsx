@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { FileUp, Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -104,13 +106,26 @@ export function WorkerDocumentUpload() {
   }
 
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
+    <form className="space-y-5" onSubmit={onSubmit}>
+      <div className="flex items-start gap-4 rounded-[24px] border border-white/10 bg-white/5 p-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#13d9cb]/10 text-[#13d9cb]">
+          <FileUp className="h-5 w-5" />
+        </div>
+        <div className="space-y-1">
+          <div className="text-sm font-semibold text-white">Upload a document</div>
+          <p className="text-sm text-white/60">
+            PDFs and images up to 10MB. Keep the file name simple and clear.
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="documentName">
-            Document Name
+          <label className="text-sm font-medium text-white/80" htmlFor="documentName">
+            Document name
           </label>
           <Input
+            className="border-white/10 bg-[#15243A] text-white placeholder:text-white/35 shadow-none focus-visible:border-[#2bb9ff]/60 focus-visible:ring-2 focus-visible:ring-[#13d9cb]/20 focus-visible:ring-offset-0"
             id="documentName"
             placeholder="Right to work document"
             value={documentName}
@@ -118,11 +133,15 @@ export function WorkerDocumentUpload() {
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="verificationFile">
+          <label className="text-sm font-medium text-white/80" htmlFor="verificationFile">
             File
           </label>
           <Input
             ref={fileInputRef}
+            className={cn(
+              "border-white/10 bg-[#15243A] text-white file:text-white placeholder:text-white/35 shadow-none focus-visible:border-[#2bb9ff]/60 focus-visible:ring-2 focus-visible:ring-[#13d9cb]/20 focus-visible:ring-offset-0",
+              "file:mr-3 file:rounded-xl file:border-0 file:bg-white/5 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+            )}
             id="verificationFile"
             accept=".pdf,image/*"
             type="file"
@@ -131,28 +150,30 @@ export function WorkerDocumentUpload() {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Supported files: PDF, JPEG, PNG, WEBP, and GIF. Maximum size: 10MB.
-      </p>
-
       {selectedFile ? (
-        <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 text-sm">
-          Selected file: <span className="font-medium">{selectedFile.name}</span>
+        <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 text-sm text-white/80">
+          Selected file: <span className="font-medium text-white">{selectedFile.name}</span>
         </div>
       ) : null}
 
       {isUploading ? (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
             <span>Uploading</span>
             <span>{uploadProgress}%</span>
           </div>
-          <Progress value={uploadProgress} />
+          <Progress className="bg-white/10 [&>div]:bg-[linear-gradient(90deg,#076c82_0%,#13d9cb_100%)]" value={uploadProgress} />
         </div>
       ) : null}
 
-      <Button className="w-full" disabled={isUploading || !selectedFile} size="lg" type="submit">
+      <Button
+        className="h-12 w-full rounded-2xl bg-[#076c82] px-6 text-white shadow-none transition hover:bg-[#13d9cb]"
+        disabled={isUploading || !selectedFile}
+        size="lg"
+        type="submit"
+      >
         {isUploading ? "Uploading document..." : "Upload document"}
+        {!isUploading ? <Upload className="h-4 w-4" /> : null}
       </Button>
     </form>
   );

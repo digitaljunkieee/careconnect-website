@@ -9,10 +9,12 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { WorkerApplicationsTable } from "@/components/worker/worker-applications-table";
+import {
+  WorkerApplicationsMarketplace
+} from "@/components/worker/worker-applications-marketplace";
 import { getWorkerApplicationsData } from "@/lib/worker-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
-import { getResponsivePageSize, parsePage, parsePageSize } from "@/lib/pagination";
+import { getResponsivePageSize, parsePage } from "@/lib/pagination";
 
 type WorkerApplicationsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -29,6 +31,14 @@ function firstQueryValue(
   return value ?? fallback;
 }
 
+function normalizeApplicationStatus(value: string) {
+  if (value === "PENDING" || value === "ACCEPTED" || value === "REJECTED") {
+    return value;
+  }
+
+  return "all";
+}
+
 export default async function WorkerApplicationsPage({
   searchParams
 }: WorkerApplicationsPageProps) {
@@ -39,32 +49,30 @@ export default async function WorkerApplicationsPage({
   }
 
   const resolvedSearchParams = (await searchParams) ?? {};
-
   const page = parsePage(firstQueryValue(resolvedSearchParams.page));
-  const pageSize = parsePageSize(
-    firstQueryValue(resolvedSearchParams.pageSize),
-    getResponsivePageSize((await headers()).get("user-agent"))
-  );
-  const status = firstQueryValue(resolvedSearchParams.status);
+  const pageSize = getResponsivePageSize((await headers()).get("user-agent"));
+  const status = normalizeApplicationStatus(firstQueryValue(resolvedSearchParams.status));
+  const search = firstQueryValue(resolvedSearchParams.search).trim();
 
   const data = await getWorkerApplicationsData(user.id, {
     page,
     pageSize,
-    status: status || undefined
+    status: status === "all" ? undefined : status,
+    search
   });
 
   if (!data) {
     return (
-      <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle>Applications</CardTitle>
-          <CardDescription>
-            Create your worker profile before viewing application history.
+      <Card className="border-white/10 bg-[#101D31]/90 text-white shadow-[0_24px_80px_rgba(4,14,38,0.35)]">
+        <CardHeader className="p-5 sm:p-6">
+          <CardTitle className="text-2xl text-white">My applications</CardTitle>
+          <CardDescription className="text-white/65">
+            Complete your worker profile before browsing application history.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/dashboard/worker/profile">Complete profile</Link>
+        <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
+          <Button asChild className="rounded-2xl bg-[#076c82] text-white hover:bg-[#13d9cb]">
+            <Link href="/dashboard/worker/profile">Go to profile</Link>
           </Button>
         </CardContent>
       </Card>
@@ -72,54 +80,18 @@ export default async function WorkerApplicationsPage({
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle>Your applications</CardTitle>
-          <CardDescription>
-            Narrow the history by application status.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="flex flex-col gap-4 sm:flex-row sm:items-end" method="get">
-            <input name="page" type="hidden" value="1" />
-            <input name="pageSize" type="hidden" value={String(pageSize)} />
-            <div className="space-y-2 sm:min-w-[16rem]">
-              <label className="text-sm font-medium" htmlFor="status">
-                Status
-              </label>
-              <select
-                className="h-11 w-full rounded-2xl border border-input bg-background px-4 text-sm"
-                defaultValue={status}
-                id="status"
-                name="status"
-              >
-                <option value="">All statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="ACCEPTED">Accepted</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
-            <Button className="rounded-2xl" type="submit">
-              Apply filter
-            </Button>
-            <Button asChild className="rounded-2xl" variant="outline">
-              <Link href="/dashboard/worker/applications">Reset</Link>
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <WorkerApplicationsTable
-        basePath="/dashboard/worker/applications"
-        page={data.page}
-        pageCount={data.pageCount}
-        query={{
-          status: status || undefined,
-          pageSize: String(pageSize)
-        }}
-        rows={data.rows}
-      />
-    </div>
+    <WorkerApplicationsMarketplace
+      basePath="/dashboard/worker/applications"
+      page={data.page}
+      pageCount={data.pageCount}
+      query={{
+        pageSize: String(pageSize),
+        search,
+        status
+      }}
+      rows={data.rows}
+      statusCounts={data.statusCounts}
+      totalCount={data.total}
+    />
   );
 }

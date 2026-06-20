@@ -24,6 +24,19 @@ export const VERIFICATION_STATUSES = [
 export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
 
 export const WORKER_ROLE_TYPES = [
+  "CARE_ASSISTANT",
+  "SUPPORT_WORKER",
+  "SENIOR_CARE_ASSISTANT",
+  "HEALTHCARE_ASSISTANT",
+  "DOMICILIARY_CARE_WORKER",
+  "LIVE_IN_CARER",
+  "REGISTERED_NURSE",
+  "MENTAL_HEALTH_NURSE",
+  "LEARNING_DISABILITY_NURSE",
+  "DEMENTIA_CARE_WORKER",
+  "NIGHT_CARE_WORKER",
+  "REHABILITATION_SUPPORT_WORKER",
+  "COMPLEX_CARE_WORKER",
   "CARE_SUPPORT",
   "PERSONAL_CARE",
   "CLEANING"
@@ -32,9 +45,22 @@ export const WORKER_ROLE_TYPES = [
 export type WorkerRoleType = (typeof WORKER_ROLE_TYPES)[number];
 
 export const WORKER_ROLE_TYPE_LABELS: Record<WorkerRoleType, string> = {
-  CARE_SUPPORT: "Care Support",
-  PERSONAL_CARE: "Personal Care",
-  CLEANING: "Cleaning"
+  CARE_ASSISTANT: "Care Assistant",
+  SUPPORT_WORKER: "Support Worker",
+  SENIOR_CARE_ASSISTANT: "Senior Care Assistant",
+  HEALTHCARE_ASSISTANT: "Healthcare Assistant (HCA)",
+  DOMICILIARY_CARE_WORKER: "Domiciliary Care Worker",
+  LIVE_IN_CARER: "Live-in Carer",
+  REGISTERED_NURSE: "Registered Nurse (RGN)",
+  MENTAL_HEALTH_NURSE: "Mental Health Nurse (RMN)",
+  LEARNING_DISABILITY_NURSE: "Learning Disability Nurse (RNLD)",
+  DEMENTIA_CARE_WORKER: "Dementia Care Worker",
+  NIGHT_CARE_WORKER: "Night Care Worker",
+  REHABILITATION_SUPPORT_WORKER: "Rehabilitation Support Worker",
+  COMPLEX_CARE_WORKER: "Complex Care Worker",
+  CARE_SUPPORT: "Care Support Worker",
+  PERSONAL_CARE: "Personal Care Worker",
+  CLEANING: "Cleaning Support Worker"
 };
 
 export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {

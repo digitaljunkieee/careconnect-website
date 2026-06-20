@@ -5,11 +5,14 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmationActionButton } from "@/components/confirmation-action-button";
+import { cn } from "@/lib/utils";
 
 type ShiftApplyButtonProps = {
   shiftId: string;
   alreadyApplied: boolean;
   canApply: boolean;
+  label?: string;
+  triggerClassName?: string;
 };
 
 async function parseApiError(response: Response) {
@@ -23,9 +26,12 @@ async function parseApiError(response: Response) {
 export function ShiftApplyButton({
   shiftId,
   alreadyApplied,
-  canApply
+  canApply,
+  label = "Apply",
+  triggerClassName
 }: ShiftApplyButtonProps) {
   const router = useRouter();
+  const triggerStyles = cn("rounded-2xl", triggerClassName);
 
   if (alreadyApplied) {
     return <Badge variant="secondary">Applied</Badge>;
@@ -33,7 +39,7 @@ export function ShiftApplyButton({
 
   if (!canApply) {
     return (
-      <Button className="rounded-2xl" disabled variant="outline">
+      <Button className={triggerStyles} disabled variant="outline">
         Verification required
       </Button>
     );
@@ -43,6 +49,7 @@ export function ShiftApplyButton({
     <ConfirmationActionButton
       confirmLabel="Apply"
       description="Your application will be submitted immediately and the facility will be notified."
+      loadingLabel="Applying..."
       onConfirm={async () => {
         const response = await fetch("/api/worker/applications", {
           method: "POST",
@@ -61,8 +68,9 @@ export function ShiftApplyButton({
       }}
       title="Apply to this shift?"
       triggerVariant="outline"
+      triggerClassName={triggerStyles}
     >
-      Apply
+      {label}
     </ConfirmationActionButton>
   );
 }

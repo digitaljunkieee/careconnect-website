@@ -8,7 +8,7 @@ import Shift from "@/models/Shift";
 import VerificationLog from "@/models/VerificationLog";
 import type { WorkerRoleType, VerificationStatus } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
-import { getSkip } from "@/lib/pagination";
+import { getSkip, paginateItems } from "@/lib/pagination";
 
 type LeanUser = {
   firstName?: string | null;
@@ -46,12 +46,24 @@ type WorkerDashboardAssignmentItem = {
 
 type WorkerDashboardAvailableShiftItem = {
   _id: unknown;
-  facility?: { companyName?: string } | null;
+  facility?: {
+    companyName?: string;
+    address?: string;
+    facilityType?: string;
+    description?: string;
+  } | null;
+  facilityId?: {
+    companyName?: string;
+    address?: string;
+    facilityType?: string;
+    description?: string;
+  } | null;
   date?: Date;
   startTime?: string;
   endTime?: string;
   hourlyRate?: number;
   roleRequired?: string;
+  requiredQualifications?: string;
   notes?: string;
 };
 
@@ -72,12 +84,24 @@ type WorkerDashboardApplicationItem = {
 
 type WorkerShiftBoardItem = {
   _id: unknown;
-  facility?: { companyName?: string } | null;
+  facility?: {
+    companyName?: string;
+    address?: string;
+    facilityType?: string;
+    description?: string;
+  } | null;
+  facilityId?: {
+    companyName?: string;
+    address?: string;
+    facilityType?: string;
+    description?: string;
+  } | null;
   date?: Date;
   startTime?: string;
   endTime?: string;
   hourlyRate?: number;
   roleRequired?: string;
+  requiredQualifications?: string;
   notes?: string;
 };
 
@@ -122,6 +146,7 @@ export type WorkerProfileData = {
   verificationStatus: VerificationStatus;
   isVerified: boolean;
   cloudinaryDocuments: CloudinaryDocument[];
+  profileCompletionPercent: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -158,14 +183,20 @@ export type VerificationHistoryItem = {
 export type WorkerShiftBoardRow = {
   id: string;
   facilityName: string;
+  facilityType: string;
+  location: string;
   date: string;
   startTime: string;
   endTime: string;
   hourlyRate: number;
   hourlyRateLabel: string;
   roleRequired: string;
+  requirements: string;
+  description: string;
   notes: string;
+  tags: string[];
   alreadyApplied: boolean;
+  isFeatured: boolean;
 };
 
 export type WorkerApplicationRow = {
@@ -181,6 +212,22 @@ export type WorkerApplicationRow = {
   appliedAt: string;
 };
 
+export type WorkerApplicationStatusCounts = {
+  ALL: number;
+  PENDING: number;
+  ACCEPTED: number;
+  REJECTED: number;
+};
+
+export type WorkerApplicationsData = {
+  rows: WorkerApplicationRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  statusCounts: WorkerApplicationStatusCounts;
+};
+
 export type WorkerAssignmentRow = {
   id: string;
   shiftId: string;
@@ -189,6 +236,275 @@ export type WorkerAssignmentRow = {
   hours: string;
   status: string;
 };
+
+function normalizeValue(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function titleCase(value: string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function getPrimaryAddress(addressHistory?: string[] | null) {
+  if (!Array.isArray(addressHistory)) {
+    return "";
+  }
+
+  const entries = addressHistory.map((entry) => entry.trim()).filter(Boolean);
+  return entries.at(-1) ?? "";
+}
+
+function extractPostcodeArea(address?: string) {
+  const postcodeMatch = address
+    ?.toUpperCase()
+    .match(/\b([A-Z]{1,2})\d[A-Z\d]?\s*\d[A-Z]{2}\b/);
+
+  return postcodeMatch?.[1] ?? "";
+}
+
+function extractLocationLabel(address?: string | null) {
+  const trimmed = address?.trim() ?? "";
+  if (!trimmed) {
+    return "";
+  }
+
+  const parts = trimmed
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!parts.length) {
+    return "";
+  }
+
+  const lastPart = parts.at(-1) ?? "";
+  const postcodePattern = /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/i;
+
+  if (postcodePattern.test(lastPart) && parts.length > 1) {
+    return parts.at(-2) ?? lastPart;
+  }
+
+  return lastPart;
+}
+
+function getShiftFacility(
+  item: Pick<WorkerShiftBoardItem, "facility" | "facilityId">
+) {
+  return item.facility ?? item.facilityId ?? null;
+}
+
+function parseShiftHour(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const [hours, minutes = "0"] = value.split(":");
+  const parsedHours = Number.parseInt(hours, 10);
+  const parsedMinutes = Number.parseInt(minutes, 10);
+
+  if (!Number.isFinite(parsedHours) || !Number.isFinite(parsedMinutes)) {
+    return null;
+  }
+
+  return parsedHours + parsedMinutes / 60;
+}
+
+function isUrgentShift(row: {
+  roleRequired: string;
+  requirements: string;
+  description: string;
+}) {
+  return /\b(urgent|asap|immediate|short notice|same day)\b/i.test(
+    `${row.roleRequired} ${row.requirements} ${row.description}`
+  );
+}
+
+function getShiftPeriodTag(startTime?: string) {
+  const hour = parseShiftHour(startTime);
+
+  if (hour === null) {
+    return null;
+  }
+
+  return hour >= 6 && hour < 18 ? "Day Shift" : "Night Shift";
+}
+
+function buildShiftTags(row: {
+  startTime?: string;
+  roleRequired: string;
+  requirements: string;
+  description: string;
+  facilityType: string;
+}) {
+  const tags = new Set<string>();
+
+  const periodTag = getShiftPeriodTag(row.startTime);
+  if (periodTag) {
+    tags.add(periodTag);
+  }
+
+  if (isUrgentShift(row)) {
+    tags.add("Urgent");
+  }
+
+  if (/\bdementia\b/i.test(`${row.roleRequired} ${row.requirements} ${row.description}`)) {
+    tags.add("Dementia Care");
+  }
+
+  if (row.facilityType) {
+    tags.add(row.facilityType);
+  }
+
+  return Array.from(tags).slice(0, 3);
+}
+
+function computeFeaturedScore(row: {
+  hourlyRate: number;
+  date: string;
+  startTime: string;
+  roleRequired: string;
+  requirements: string;
+  description: string;
+}) {
+  const shiftDate = new Date(row.date);
+  const now = new Date();
+  const diffDays = Math.max(
+    Math.floor((shiftDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    0
+  );
+  const urgencyScore = isUrgentShift(row) ? 1000 : 0;
+  const rateScore = Math.round(row.hourlyRate);
+  const recencyScore = diffDays <= 1 ? 80 : diffDays <= 3 ? 60 : diffDays <= 7 ? 30 : 0;
+  const shiftTimeScore = parseShiftHour(row.startTime) ?? 0;
+
+  return urgencyScore + rateScore + recencyScore + shiftTimeScore;
+}
+
+function getDistanceRank(workerLocation: string, facilityLocation: string) {
+  const normalizedWorkerLocation = normalizeValue(workerLocation);
+  const normalizedFacilityLocation = normalizeValue(facilityLocation);
+
+  if (!normalizedWorkerLocation || !normalizedFacilityLocation) {
+    return 99;
+  }
+
+  if (normalizedWorkerLocation === normalizedFacilityLocation) {
+    return 0;
+  }
+
+  const workerPostcodeArea = extractPostcodeArea(workerLocation);
+  const facilityPostcodeArea = extractPostcodeArea(facilityLocation);
+
+  if (workerPostcodeArea && facilityPostcodeArea && workerPostcodeArea === facilityPostcodeArea) {
+    return 0;
+  }
+
+  const workerTokens = new Set(normalizedWorkerLocation.split(" ").filter(Boolean));
+  const facilityTokens = normalizedFacilityLocation.split(" ").filter(Boolean);
+
+  if (facilityTokens.some((token) => workerTokens.has(token))) {
+    return 1;
+  }
+
+  return 2;
+}
+
+function matchesDistanceFilter(
+  distanceFilter: string,
+  workerLocation: string,
+  facilityLocation: string
+) {
+  if (!distanceFilter || distanceFilter === "all" || !workerLocation) {
+    return true;
+  }
+
+  const rank = getDistanceRank(workerLocation, facilityLocation);
+
+  switch (distanceFilter) {
+    case "nearby":
+      return rank <= 0;
+    case "city":
+      return rank <= 1;
+    case "regional":
+      return rank <= 2;
+    default:
+      return true;
+  }
+}
+
+function compareMarketplaceRows(
+  a: WorkerShiftBoardRow & { featuredScore: number },
+  b: WorkerShiftBoardRow & { featuredScore: number }
+) {
+  const featuredDiff = b.featuredScore - a.featuredScore;
+  if (featuredDiff !== 0) {
+    return featuredDiff;
+  }
+
+  const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+  if (dateDiff !== 0) {
+    return dateDiff;
+  }
+
+  const rateDiff = b.hourlyRate - a.hourlyRate;
+  if (rateDiff !== 0) {
+    return rateDiff;
+  }
+
+  return a.facilityName.localeCompare(b.facilityName);
+}
+
+function buildMarketplaceRow(
+  item: WorkerShiftBoardItem,
+  appliedShiftIds: Set<string>
+): WorkerShiftBoardRow & { featuredScore: number } {
+  const date = item.date ? new Date(item.date) : new Date();
+  const facility = getShiftFacility(item);
+  const location = extractLocationLabel(facility?.address) || "Location on request";
+  const facilityType = facility?.facilityType ? titleCase(facility.facilityType) : "";
+  const roleRequired = item.roleRequired ?? "";
+  const requirements = item.requiredQualifications ?? "";
+  const description = item.notes ?? "";
+  const hourlyRate = item.hourlyRate ?? 0;
+
+  return {
+    id: String(item._id),
+    facilityName: facility?.companyName ?? "Unknown facility",
+    facilityType,
+    location,
+    date: date.toISOString(),
+    startTime: item.startTime ?? "--:--",
+    endTime: item.endTime ?? "--:--",
+    hourlyRate,
+    hourlyRateLabel: formatCurrency(hourlyRate),
+    roleRequired,
+    requirements,
+    description,
+    notes: item.notes ?? "",
+    tags: buildShiftTags({
+      startTime: item.startTime,
+      roleRequired,
+      requirements,
+      description,
+      facilityType
+    }),
+    alreadyApplied: appliedShiftIds.has(String(item._id)),
+    isFeatured: false,
+    featuredScore: computeFeaturedScore({
+      hourlyRate,
+      date: date.toISOString(),
+      startTime: item.startTime ?? "--:--",
+      roleRequired,
+      requirements,
+      description
+    })
+  };
+}
 
 function getWorkerProfileCompletionPercent(
   profile: LeanWorkerProfile | null,
@@ -224,12 +540,13 @@ function serializeWorkerProfile(
       : [],
     niNumber: profile.niNumber ?? "",
     shareCode: profile.shareCode ?? "",
-    roleType: profile.roleType ?? "CARE_SUPPORT",
+    roleType: profile.roleType ?? "CARE_ASSISTANT",
     verificationStatus: profile.verificationStatus ?? "PENDING",
     isVerified: Boolean(profile.isVerified),
     cloudinaryDocuments: Array.isArray(profile.cloudinaryDocuments)
       ? profile.cloudinaryDocuments
       : [],
+    profileCompletionPercent: getWorkerProfileCompletionPercent(profile, user),
     createdAt: profile.createdAt?.toISOString?.() ?? new Date().toISOString(),
     updatedAt: profile.updatedAt?.toISOString?.() ?? new Date().toISOString()
   };
@@ -292,7 +609,7 @@ export async function getWorkerDashboardData(userId: string): Promise<WorkerDash
         .limit(3)
         .populate({
           path: "facilityId",
-          select: "companyName"
+          select: "companyName address facilityType description"
         })
         .lean(),
       Application.find({ workerId: profile._id })
@@ -328,18 +645,16 @@ export async function getWorkerDashboardData(userId: string): Promise<WorkerDash
     upcomingAssignmentsCount,
     totalApplicationsCount,
     availableShiftsCount,
-    availableShifts: availableShiftsRaw.map((shift) => ({
-      id: String(shift._id),
-      facilityName: shift.facility?.companyName ?? "Unknown facility",
-      date: shift.date ? new Date(shift.date).toISOString() : new Date().toISOString(),
-      startTime: shift.startTime ?? "--:--",
-      endTime: shift.endTime ?? "--:--",
-      hourlyRate: shift.hourlyRate ?? 0,
-      hourlyRateLabel: formatCurrency(shift.hourlyRate ?? 0),
-      roleRequired: shift.roleRequired ?? "",
-      notes: shift.notes ?? "",
-      alreadyApplied: appliedShiftIdSet.has(String(shift._id))
-    })) as WorkerShiftBoardRow[],
+    availableShifts: availableShiftsRaw.map((shift) => {
+      const row = buildMarketplaceRow(shift as WorkerShiftBoardItem, appliedShiftIdSet);
+      const { featuredScore, ...marketplaceRow } = row;
+      void featuredScore;
+
+      return {
+        ...marketplaceRow,
+        isFeatured: false
+      };
+    }) as WorkerShiftBoardRow[],
     recentApplications: recentApplicationsRaw.map((application) => ({
       id: String(application._id),
       shiftId: String(application.shiftId?._id ?? ""),
@@ -419,8 +734,9 @@ export async function getWorkerShiftBoardData(
     dateFrom?: string;
     dateTo?: string;
     minRate?: number;
-  maxRate?: number;
-  page: number;
+    maxRate?: number;
+    distance?: string;
+    page: number;
     pageSize: number;
   }
 ) {
@@ -431,15 +747,15 @@ export async function getWorkerShiftBoardData(
     return null;
   }
 
-  const skip = getSkip(filters.page, filters.pageSize);
   const baseMatch: Record<string, unknown> = { status: "OPEN" };
   const appliedShiftIds = new Set(
     (await Application.distinct("shiftId", { workerId: profile._id })).map((shiftId) =>
       String(shiftId)
     )
   );
+  const workerLocation = getPrimaryAddress(profile.addressHistory);
 
-  if (filters.role) {
+  if (filters.role && filters.role !== "all") {
     baseMatch.roleRequired = { $regex: new RegExp(filters.role, "i") };
   }
 
@@ -489,49 +805,57 @@ export async function getWorkerShiftBoardData(
             $match: {
               $or: [
                 { roleRequired: searchRegex },
+                { requiredQualifications: searchRegex },
                 { notes: searchRegex },
-                { "facility.companyName": searchRegex }
+                { "facility.companyName": searchRegex },
+                { "facility.address": searchRegex },
+                { "facility.facilityType": searchRegex }
               ]
             }
           }
         ]
-      : []),
-    { $sort: { date: 1, startTime: 1, _id: 1 } },
-    {
-      $facet: {
-        items: [{ $skip: skip }, { $limit: filters.pageSize }],
-        total: [{ $count: "count" }]
-      }
-    }
+      : [])
   ];
 
-  const [result] = (await Shift.aggregate(pipeline)) as [
-    { items?: WorkerShiftBoardItem[]; total?: Array<{ count?: number }> }
-  ];
-  const total = result?.total?.[0]?.count ?? 0;
-  const items = result?.items ?? [];
+  const items = (await Shift.aggregate(pipeline)) as WorkerShiftBoardItem[];
+  const marketplaceRows = items
+    .map((item) => buildMarketplaceRow(item, appliedShiftIds))
+    .filter((row) =>
+      matchesDistanceFilter(filters.distance ?? "all", workerLocation, row.location)
+    )
+    .sort(compareMarketplaceRows)
+    .map((row, index) =>
+      index === 0
+        ? {
+            ...row,
+            isFeatured: true
+          }
+        : row
+    );
+
+  const { rows, total, page, pageCount } = paginateItems(
+    marketplaceRows,
+    filters.page,
+    filters.pageSize
+  );
 
   return {
-    rows: items.map((item) => ({
-      id: String(item._id),
-      facilityName: item.facility?.companyName ?? "Unknown facility",
-      date: item.date ? new Date(item.date).toISOString() : new Date().toISOString(),
-      startTime: item.startTime,
-      endTime: item.endTime,
-      hourlyRate: item.hourlyRate ?? 0,
-      hourlyRateLabel: formatCurrency(item.hourlyRate ?? 0),
-      roleRequired: item.roleRequired ?? "",
-      notes: item.notes ?? "",
-      alreadyApplied: appliedShiftIds.has(String(item._id))
-    })) as WorkerShiftBoardRow[],
+    rows: rows.map((row) => {
+      const { featuredScore, ...marketplaceRow } = row;
+      void featuredScore;
+      return marketplaceRow;
+    }) as WorkerShiftBoardRow[],
     total,
-    page: filters.page,
+    page,
     pageSize: filters.pageSize,
-    pageCount: Math.max(Math.ceil(total / filters.pageSize), 1)
+    pageCount
   };
 }
 
-export async function getWorkerApplicationsData(userId: string, filters: { page: number; pageSize: number; status?: string }) {
+export async function getWorkerApplicationsData(
+  userId: string,
+  filters: { page: number; pageSize: number; status?: string; search?: string }
+) {
   await connectDB();
 
   const profile = await WorkerProfile.findOne({ userId }).lean();
@@ -545,6 +869,33 @@ export async function getWorkerApplicationsData(userId: string, filters: { page:
   }
 
   const skip = getSkip(filters.page, filters.pageSize);
+  const search = filters.search?.trim() ?? "";
+  const searchRegex = search ? new RegExp(search, "i") : null;
+
+  const statusCountRows = (await Application.aggregate([
+    { $match: { workerId: profile._id } },
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ])) as Array<{ _id?: string; count?: number }>;
+
+  const statusCounts: WorkerApplicationStatusCounts = {
+    ALL: 0,
+    PENDING: 0,
+    ACCEPTED: 0,
+    REJECTED: 0
+  };
+
+  statusCountRows.forEach((row) => {
+    const key = row._id as keyof WorkerApplicationStatusCounts | undefined;
+    if (key && key in statusCounts) {
+      statusCounts[key] = row.count ?? 0;
+    }
+  });
+  statusCounts.ALL = statusCountRows.reduce((total, row) => total + (row.count ?? 0), 0);
 
   const [result] = (await Application.aggregate([
     { $match: match },
@@ -566,6 +917,19 @@ export async function getWorkerApplicationsData(userId: string, filters: { page:
       }
     },
     { $unwind: { path: "$facility", preserveNullAndEmptyArrays: true } },
+    ...(searchRegex
+      ? [
+          {
+            $match: {
+              $or: [
+                { "facility.companyName": searchRegex },
+                { "shift.roleRequired": searchRegex },
+                { status: searchRegex }
+              ]
+            }
+          }
+        ]
+      : []),
     { $sort: { createdAt: -1 } },
     {
       $facet: {
@@ -594,7 +958,8 @@ export async function getWorkerApplicationsData(userId: string, filters: { page:
     total,
     page: filters.page,
     pageSize: filters.pageSize,
-    pageCount: Math.max(Math.ceil(total / filters.pageSize), 1)
+    pageCount: Math.max(Math.ceil(total / filters.pageSize), 1),
+    statusCounts
   };
 }
 
