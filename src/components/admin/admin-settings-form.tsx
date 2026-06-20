@@ -20,8 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useDashboardTheme } from "@/components/providers/dashboard-theme-provider";
+import { DashboardAppearanceCard } from "@/components/layout/dashboard-appearance-card";
 
 type AdminSettingsFormProps = {
   data: AdminSettingsData;
@@ -65,7 +64,6 @@ export function AdminSettingsForm({ data }: AdminSettingsFormProps) {
   const router = useRouter();
   const [isProfileSaving, setIsProfileSaving] = React.useState(false);
   const [isPasswordSaving, setIsPasswordSaving] = React.useState(false);
-  const { theme, setTheme } = useDashboardTheme();
 
   const profileForm = useForm<AdminProfileFormValues>({
     resolver: zodResolver(adminSettingsProfileSchema) as unknown as Resolver<AdminProfileFormValues>,
@@ -138,27 +136,7 @@ export function AdminSettingsForm({ data }: AdminSettingsFormProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription>Set the dashboard mode.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between gap-4 rounded-3xl border border-border/70 bg-muted/25 px-4 py-4">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Dark dashboard</p>
-              <p className="text-sm text-muted-foreground">
-                {theme === "dark" ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-            <Switch
-              aria-label="Dark dashboard"
-              checked={theme === "dark"}
-              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <DashboardAppearanceCard />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="border-border/70">

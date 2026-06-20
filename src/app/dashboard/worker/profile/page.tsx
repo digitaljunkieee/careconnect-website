@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardAppearanceCard } from "@/components/layout/dashboard-appearance-card";
 import {
   VERIFICATION_STATUS_LABELS,
   WORKER_ROLE_TYPE_LABELS
@@ -283,10 +284,12 @@ export default async function WorkerProfilePage() {
               <p className="text-sm leading-6 text-white/70">
                 {missingRequirements.length
                   ? "Finish the missing items to give your profile a complete, verified look."
-                  : "Everything is filled in. Your profile is ready for review."}
+                : "Everything is filled in. Your profile is ready for review."}
               </p>
             </div>
           </StatusCard>
+
+          <DashboardAppearanceCard tone="dark" />
 
           <Card className="border-white/10 bg-[#101D31]/90 text-white shadow-[0_24px_80px_rgba(4,14,38,0.35)]">
             <CardHeader className="p-5 pb-3 sm:p-6 sm:pb-3">

@@ -194,7 +194,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
       : "border border-border/70 bg-background/95 text-foreground shadow-sm hover:bg-accent/70"
   );
   const headerThemeStripClassName = cn(
-    "flex items-center rounded-full p-1 shadow-sm",
+    "hidden items-center rounded-full p-1 shadow-sm lg:flex",
     isDarkDashboard
       ? "border border-border/70 bg-background/70"
       : "border border-border/70 bg-background/95"

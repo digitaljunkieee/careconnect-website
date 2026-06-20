@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import { DashboardAppearanceCard } from "@/components/layout/dashboard-appearance-card";
 import { getFacilityProfileData } from "@/lib/facility-portal";
 import { requireSessionUser } from "@/lib/auth-helpers";
 import { cn } from "@/lib/utils";
@@ -180,6 +181,8 @@ export default async function FacilityProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          <DashboardAppearanceCard />
 
           <Card className="border-border/70">
             <CardHeader className="space-y-3 p-5 sm:p-6">
