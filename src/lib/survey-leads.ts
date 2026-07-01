@@ -1,22 +1,9 @@
-import type { FilterQuery } from "mongoose";
-import { connectDB } from "@/lib/mongodb";
-import { toCsv } from "@/lib/csv";
-import { clampNumber, getSkip } from "@/lib/pagination";
-import SurveyLead, { type SurveyLeadDocument } from "@/models/SurveyLead";
-import type { SurveyUserType } from "@/lib/validators/survey";
-
-type LeanSurveyLead = Pick<
-  SurveyLeadDocument,
-  | "_id"
-  | "fullName"
-  | "email"
-  | "phone"
-  | "userType"
-  | "location"
-  | "notificationConsent"
-  | "status"
-  | "createdAt"
->;
+import "server-only";
+import { getBackendBaseUrl } from "@/lib/backend-url";
+import type {
+  SurveyLeadStatus,
+  SurveyUserType
+} from "@/lib/validators/survey";
 
 export type AdminSurveyLeadRow = {
   id: string;
@@ -26,8 +13,25 @@ export type AdminSurveyLeadRow = {
   userType: SurveyUserType;
   location: string;
   notificationConsent: boolean;
-  status: "WAITLISTED";
+  status: SurveyLeadStatus;
   submittedAt: string;
+};
+
+export type AdminSurveyLeadDetail = AdminSurveyLeadRow & {
+  surveyAnswers: Record<string, unknown>;
+  updatedAt: string;
+};
+
+export type AdminSurveyLeadListData = {
+  rows: AdminSurveyLeadRow[];
+  total: number;
+  consented: number;
+  workerTotal: number;
+  facilityTotal: number;
+  partnerTotal: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
 };
 
 export type SurveyLeadListFilters = {
@@ -35,105 +39,108 @@ export type SurveyLeadListFilters = {
   pageSize: number;
   search: string;
   userType?: SurveyUserType;
+  status?: SurveyLeadStatus;
 };
 
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+type BackendResponse<T> = {
+  success?: boolean;
+  data?: T;
+  message?: string;
+  error?: { message?: string };
+};
 
-function buildFilter(filters: Pick<SurveyLeadListFilters, "search" | "userType">) {
-  const filter: FilterQuery<SurveyLeadDocument> = {};
-  const search = filters.search.trim();
-
-  if (filters.userType) {
-    filter.userType = filters.userType;
+async function requestAdminBackend<T>(
+  accessToken: string,
+  path: string,
+  init?: RequestInit
+) {
+  if (!accessToken) {
+    const error = new Error("Your admin session has expired. Please sign in again.");
+    (error as Error & { statusCode?: number }).statusCode = 401;
+    throw error;
   }
 
-  if (search) {
-    const pattern = new RegExp(escapeRegex(search), "i");
-    filter.$or = [
-      { fullName: pattern },
-      { email: pattern },
-      { phone: pattern },
-      { location: pattern }
-    ];
+  const response = await fetch(`${getBackendBaseUrl()}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers
+    },
+    cache: "no-store"
+  });
+  const payload = (await response.json().catch(() => null)) as BackendResponse<T> | null;
+
+  if (!response.ok || !payload?.success || !payload.data) {
+    const error = new Error(
+      payload?.error?.message ?? payload?.message ?? "Unable to load survey leads."
+    );
+    (error as Error & { statusCode?: number }).statusCode = response.status;
+    throw error;
   }
 
-  return filter;
+  return payload.data;
 }
 
-function toRow(lead: LeanSurveyLead): AdminSurveyLeadRow {
-  return {
-    id: String(lead._id),
-    fullName: lead.fullName,
-    email: lead.email,
-    phone: lead.phone ?? "",
-    userType: lead.userType,
-    location: lead.location,
-    notificationConsent: Boolean(lead.notificationConsent),
-    status: lead.status,
-    submittedAt: lead.createdAt.toISOString()
-  };
+function buildQuery(filters: Partial<SurveyLeadListFilters>) {
+  const params = new URLSearchParams();
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
+  if (filters.search) params.set("search", filters.search);
+  if (filters.userType) params.set("userType", filters.userType);
+  if (filters.status) params.set("status", filters.status);
+  return params;
 }
 
-export async function getAdminSurveyLeadListData(filters: SurveyLeadListFilters) {
-  await connectDB();
-
-  const query = buildFilter(filters);
-  const [total, consented, userTypeCounts] = await Promise.all([
-    SurveyLead.countDocuments(query),
-    SurveyLead.countDocuments({ ...query, notificationConsent: true }),
-    SurveyLead.aggregate<{ _id: SurveyUserType; count: number }>([
-      { $match: query },
-      { $group: { _id: "$userType", count: { $sum: 1 } } }
-    ])
-  ]);
-  const pageCount = Math.max(Math.ceil(total / filters.pageSize), 1);
-  const page = clampNumber(filters.page, 1, pageCount);
-  const leads = (await SurveyLead.find(query)
-    .sort({ createdAt: -1 })
-    .skip(getSkip(page, filters.pageSize))
-    .limit(filters.pageSize)
-    .lean()) as LeanSurveyLead[];
-  const counts = Object.fromEntries(userTypeCounts.map((item) => [item._id, item.count]));
-
-  return {
-    rows: leads.map(toRow),
-    total,
-    consented,
-    workerTotal: counts.CARE_WORKER ?? 0,
-    facilityTotal: counts.CARE_FACILITY ?? 0,
-    partnerTotal: counts.INTERESTED_PARTNER ?? 0,
-    page,
-    pageSize: filters.pageSize,
-    pageCount
-  };
+export function getAdminSurveyLeadListData(
+  accessToken: string,
+  filters: SurveyLeadListFilters
+) {
+  const query = buildQuery(filters);
+  return requestAdminBackend<AdminSurveyLeadListData>(
+    accessToken,
+    `/api/admin/survey-leads?${query.toString()}`
+  );
 }
 
-export async function exportAdminSurveyLeadsCsv(filters: {
-  search: string;
-  userType?: SurveyUserType;
-}) {
-  await connectDB();
+export function getAdminSurveyLeadDetail(accessToken: string, id: string) {
+  return requestAdminBackend<AdminSurveyLeadDetail>(
+    accessToken,
+    `/api/admin/survey-leads/${encodeURIComponent(id)}`
+  );
+}
 
-  const leads = (await SurveyLead.find(buildFilter(filters))
-    .sort({ createdAt: -1 })
-    .limit(10000)
-    .lean()) as LeanSurveyLead[];
-  const rows = leads.map(toRow).map((row) => ({
-    ...row,
-    userType: row.userType.replaceAll("_", " "),
-    notificationConsent: row.notificationConsent ? "Yes" : "No"
-  }));
+export function updateAdminSurveyLeadStatus(
+  accessToken: string,
+  id: string,
+  status: SurveyLeadStatus
+) {
+  return requestAdminBackend<AdminSurveyLeadDetail>(
+    accessToken,
+    `/api/admin/survey-leads/${encodeURIComponent(id)}/status`,
+    { method: "PATCH", body: JSON.stringify({ status }) }
+  );
+}
 
-  return toCsv(rows, [
-    { key: "fullName", label: "Name" },
-    { key: "email", label: "Email" },
-    { key: "phone", label: "Phone" },
-    { key: "userType", label: "User Type" },
-    { key: "location", label: "Location" },
-    { key: "notificationConsent", label: "Notification Consent" },
-    { key: "submittedAt", label: "Submitted Date" },
-    { key: "status", label: "Status" }
-  ]);
+export async function exportAdminSurveyLeadsCsv(
+  accessToken: string,
+  filters: Pick<SurveyLeadListFilters, "search" | "userType" | "status">
+) {
+  const query = buildQuery(filters);
+  const response = await fetch(
+    `${getBackendBaseUrl()}/api/admin/survey-leads/export/csv?${query.toString()}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store"
+    }
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as BackendResponse<never> | null;
+    const error = new Error(payload?.error?.message ?? "Unable to export survey leads.");
+    (error as Error & { statusCode?: number }).statusCode = response.status;
+    throw error;
+  }
+
+  return response.text();
 }

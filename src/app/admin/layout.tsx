@@ -1,7 +1,17 @@
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import {
+  DASHBOARD_THEME_COOKIE_NAME,
+  DashboardThemeProvider,
+  type DashboardTheme
+} from "@/components/providers/dashboard-theme-provider";
+
+function parseDashboardTheme(value: string | undefined): DashboardTheme {
+  return value === "dark" ? "dark" : "light";
+}
 
 export default async function AdminRootLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -14,5 +24,12 @@ export default async function AdminRootLayout({ children }: { children: ReactNod
     redirect("/unauthorized");
   }
 
-  return <DashboardShell role="ADMIN">{children}</DashboardShell>;
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get(DASHBOARD_THEME_COOKIE_NAME)?.value;
+
+  return (
+    <DashboardThemeProvider initialTheme={parseDashboardTheme(themeCookie)}>
+      <DashboardShell role="ADMIN">{children}</DashboardShell>
+    </DashboardThemeProvider>
+  );
 }

@@ -6,6 +6,13 @@ export const SURVEY_USER_TYPES = [
   "INTERESTED_PARTNER"
 ] as const;
 
+export const SURVEY_LEAD_STATUSES = [
+  "WAITLISTED",
+  "CONTACTED",
+  "APPROVED",
+  "REJECTED"
+] as const;
+
 export const SHIFT_SOURCE_OPTIONS = [
   "AGENCY",
   "APP_PLATFORM",
@@ -153,3 +160,4 @@ export const surveyLeadSchema = z
 export type SurveyLeadFormInput = z.input<typeof surveyLeadSchema>;
 export type SurveyLeadInput = z.output<typeof surveyLeadSchema>;
 export type SurveyUserType = (typeof SURVEY_USER_TYPES)[number];
+export type SurveyLeadStatus = (typeof SURVEY_LEAD_STATUSES)[number];

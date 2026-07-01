@@ -1,6 +1,11 @@
 import { Schema, Types } from "mongoose";
 import { getModel } from "@/models/model-helpers";
-import { SURVEY_USER_TYPES, type SurveyUserType } from "@/lib/validators/survey";
+import {
+  SURVEY_LEAD_STATUSES,
+  SURVEY_USER_TYPES,
+  type SurveyLeadStatus,
+  type SurveyUserType
+} from "@/lib/validators/survey";
 
 export interface SurveyLeadDocument {
   _id: Types.ObjectId;
@@ -11,7 +16,7 @@ export interface SurveyLeadDocument {
   location: string;
   surveyAnswers: Record<string, unknown>;
   notificationConsent: boolean;
-  status: "WAITLISTED";
+  status: SurveyLeadStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,7 +30,7 @@ const surveyLeadSchema = new Schema<SurveyLeadDocument>(
     location: { type: String, required: true, trim: true },
     surveyAnswers: { type: Schema.Types.Mixed, required: true, default: {} },
     notificationConsent: { type: Boolean, required: true, default: true, index: true },
-    status: { type: String, required: true, enum: ["WAITLISTED"], default: "WAITLISTED", index: true }
+    status: { type: String, required: true, enum: SURVEY_LEAD_STATUSES, default: "WAITLISTED", index: true }
   },
   {
     collection: "survey_leads",

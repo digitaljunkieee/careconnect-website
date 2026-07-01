@@ -26,6 +26,13 @@ const dashboardThemeBootstrap = `
   try {
     var match = document.cookie.match(/(?:^|; )careconnect-dashboard-theme=([^;]+)/);
     var theme = match ? decodeURIComponent(match[1]) : null;
+    if (theme !== "dark" && theme !== "light") {
+      try {
+        theme = window.localStorage.getItem("careconnect-dashboard-theme");
+      } catch (storageError) {
+        theme = null;
+      }
+    }
     var root = document.documentElement;
 
     if (theme === "dark") {

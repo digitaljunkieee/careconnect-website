@@ -31,7 +31,7 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
     {
       id: "admin-overview",
       label: "Dashboard",
-      href: "/admin/dashboard",
+      href: "/dashboard/admin",
       icon: LayoutDashboard,
       mobile: true
     },

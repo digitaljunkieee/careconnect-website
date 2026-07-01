@@ -1,8 +1,7 @@
 import { isPrelaunchSurveyEnabled } from "@/lib/prelaunch";
-import { connectDB } from "@/lib/mongodb";
-import { jsonError, jsonSuccess } from "@/lib/api";
+import { jsonError } from "@/lib/api";
 import { surveyLeadSchema } from "@/lib/validators/survey";
-import SurveyLead from "@/models/SurveyLead";
+import { getBackendBaseUrl } from "@/lib/backend-url";
 
 export async function POST(request: Request) {
   if (!isPrelaunchSurveyEnabled()) {
@@ -17,40 +16,19 @@ export async function POST(request: Request) {
       return jsonError("Please review the highlighted survey fields.", 400, parsed.error.flatten());
     }
 
-    await connectDB();
-
-    const existing = await SurveyLead.exists({ email: parsed.data.email });
-
-    if (existing) {
-      return jsonError(
-        "You have already joined the CareConnect waitlist with this email address.",
-        409,
-        { code: "DUPLICATE_SURVEY_LEAD" }
-      );
-    }
-
-    const lead = await SurveyLead.create({
-      ...parsed.data,
-      status: "WAITLISTED"
+    const response = await fetch(`${getBackendBaseUrl()}/api/survey-leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsed.data),
+      cache: "no-store"
     });
+    const payload = await response.text();
 
-    return jsonSuccess(
-      { id: String(lead._id), status: lead.status },
-      "Your early-access response has been received.",
-      201
-    );
+    return new Response(payload, {
+      status: response.status,
+      headers: { "Content-Type": response.headers.get("content-type") ?? "application/json" }
+    });
   } catch (error) {
-    const duplicate =
-      error && typeof error === "object" && "code" in error && error.code === 11000;
-
-    if (duplicate) {
-      return jsonError(
-        "You have already joined the CareConnect waitlist with this email address.",
-        409,
-        { code: "DUPLICATE_SURVEY_LEAD" }
-      );
-    }
-
     console.error("[Survey lead submission error]", error);
     return jsonError(
       "We couldn't save your response right now. Please try again in a moment.",
