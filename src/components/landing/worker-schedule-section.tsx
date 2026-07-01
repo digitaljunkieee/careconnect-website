@@ -32,7 +32,7 @@ export function WorkerScheduleSection() {
               </div>
 
               <div className="group relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.34)] transition-transform duration-500 hover:-translate-y-1">
-                <div className="relative aspect-[6/5] w-full overflow-hidden rounded-[28px]">
+                <div className="relative aspect-[5/6] w-full overflow-hidden rounded-[28px] sm:aspect-[6/5]">
                   <Image
                     src="/images/workers/flexible-shift-support.webp"
                     alt="White care worker reviewing an activity schedule with an older South Asian woman"
@@ -45,26 +45,26 @@ export function WorkerScheduleSection() {
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,108,130,0.02),rgba(7,108,130,0.14))]" />
                 </div>
 
-                <div className="absolute right-4 top-4 z-20 max-w-[11.5rem] rounded-2xl border border-slate-200/80 bg-white/96 px-4 py-3 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.35)] backdrop-blur-md sm:right-6 sm:top-6">
-                  <div className="flex items-center gap-2 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-primary/80">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <div className="absolute bottom-[7.25rem] right-3 z-20 w-[10rem] rounded-2xl border border-white/70 bg-white/95 px-3.5 py-3 shadow-xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-md md:bottom-auto md:right-6 md:top-6 md:w-auto md:max-w-[12rem] md:px-4">
+                  <div className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 md:text-xs">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600 ring-4 ring-emerald-100" />
                     Shift Available
                   </div>
-                  <p className="mt-2 text-2xl font-black leading-none text-slate-950">£18/hr</p>
-                  <p className="mt-1 text-sm font-semibold leading-5 text-slate-600">
+                  <p className="mt-2 text-xl font-bold leading-none text-slate-950 md:text-2xl">£18/hr</p>
+                  <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-700 md:text-sm">
                     Care Support Worker
                   </p>
                 </div>
 
-                <div className="absolute bottom-4 left-4 z-20 max-w-[13rem] rounded-2xl border border-slate-200/80 bg-white/96 px-4 py-3 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.35)] backdrop-blur-md sm:bottom-6 sm:left-6">
-                  <div className="flex items-center gap-2 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    <BadgeCheck className="h-4 w-4 text-primary" />
-                    Application Sent
+                <div className="absolute bottom-3 left-3 z-20 w-[10.5rem] rounded-2xl border border-white/70 bg-white/95 px-3.5 py-3 shadow-xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-md sm:bottom-6 sm:left-6 sm:w-auto sm:max-w-[13rem] sm:px-4">
+                  <div className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-slate-700 sm:text-xs">
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-700" />
+                    Verification Sent
                   </div>
-                  <p className="mt-2 text-sm font-semibold leading-5 text-slate-950">
+                  <p className="mt-2 text-base font-semibold leading-5 text-slate-950">
                     Verified Profile
                   </p>
-                  <p className="mt-1 text-xs leading-4 text-slate-500">
+                  <p className="mt-1 text-xs font-medium leading-4 text-slate-600 sm:text-sm">
                     Ready for review
                   </p>
                 </div>
