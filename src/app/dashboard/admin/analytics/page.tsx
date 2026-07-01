@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AdminAnalyticsCharts } from "@/components/admin/admin-analytics-charts";
+import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { getAdminAnalyticsData } from "@/lib/admin-platform";
 
 type AnalyticsPageProps = {
@@ -41,7 +42,7 @@ export default async function AdminAnalyticsPage({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {[
           ["Workers", data.summary.totalWorkers],
           ["Facilities", data.summary.totalFacilities],
@@ -50,12 +51,7 @@ export default async function AdminAnalyticsPage({
           ["Verified Workers", data.summary.verifiedWorkers],
           ["Shift Completion", `${data.summary.shiftCompletionRate}%`]
         ].map(([label, value]) => (
-          <Card key={label as string} className="border-border/70">
-            <CardHeader>
-              <CardTitle className="text-3xl">{String(value)}</CardTitle>
-              <CardDescription>{label}</CardDescription>
-            </CardHeader>
-          </Card>
+          <AdminStatCard key={label as string} label={label as string} value={String(value)} />
         ))}
       </section>
 

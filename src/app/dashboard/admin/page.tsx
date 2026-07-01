@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { formatDateTime } from "@/lib/format";
 import { getAdminDashboardData } from "@/lib/admin-data";
 import { getAdminActivityLogData } from "@/lib/admin-platform";
@@ -71,8 +72,8 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-border/70">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+        <Card className="min-w-0 overflow-hidden border-border/70 shadow-sm">
           <CardContent className="space-y-5 p-5 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="max-w-2xl">
@@ -121,7 +122,7 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70">
+        <Card className="min-w-0 overflow-hidden border-border/70 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle>Pending items</CardTitle>
             <CardDescription>What needs attention right now.</CardDescription>
@@ -152,20 +153,20 @@ export default async function AdminDashboardPage() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex items-center justify-between rounded-3xl border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-[#13d9cb]/8"
+                className="flex min-w-0 items-center justify-between gap-3 rounded-3xl border border-border/70 bg-background/70 px-4 py-3 transition-colors hover:bg-[#13d9cb]/8"
               >
-                <div>
-                  <div className="text-sm font-medium">{item.label}</div>
+                <div className="min-w-0">
+                  <div className="break-words text-sm font-medium">{item.label}</div>
                   <div className="text-xs text-muted-foreground">View details</div>
                 </div>
-                <div className="text-2xl font-semibold text-primary">{item.value}</div>
+                <div className="shrink-0 text-2xl font-semibold text-primary">{item.value}</div>
               </Link>
             ))}
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((card) => {
           const value =
             card.label === "Total workers"
@@ -183,27 +184,13 @@ export default async function AdminDashboardPage() {
                         : applicationsToday;
           const Icon = card.icon;
 
-          return (
-            <Card key={card.label} className="border-border/70">
-              <CardContent className="flex h-full items-start justify-between gap-3 p-4">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                    {card.label}
-                  </div>
-                  <div className="mt-2 text-3xl font-semibold">{value}</div>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 p-2 text-primary">
-                  <Icon className="h-4 w-4" />
-                </div>
-              </CardContent>
-            </Card>
-          );
+          return <AdminStatCard key={card.label} label={card.label} value={value} icon={Icon} />;
         })}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-border/70">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+        <Card className="min-w-0 overflow-hidden border-border/70 shadow-sm">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle>Recent activity</CardTitle>
               <CardDescription>The latest operational events across the platform.</CardDescription>
@@ -247,7 +234,7 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70">
+        <Card className="min-w-0 overflow-hidden border-border/70 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle>Recent queue</CardTitle>
             <CardDescription>Pending items that need a decision.</CardDescription>
@@ -256,9 +243,9 @@ export default async function AdminDashboardPage() {
             {data.pendingVerificationQueue.length ? (
               data.pendingVerificationQueue.map((item) => (
                 <div key={item.id} className="rounded-3xl border border-border/70 bg-background/70 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-medium">{item.workerName}</div>
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="break-words font-medium">{item.workerName}</div>
                       <div className="text-sm text-muted-foreground">
                         Submitted {formatDateTime(item.submittedAt)}
                       </div>

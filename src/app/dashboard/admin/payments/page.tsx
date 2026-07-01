@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/pagination-controls";
+import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { getAdminPaymentListData } from "@/lib/admin-platform";
 import {
   buildPageHref,
@@ -84,25 +85,10 @@ export default async function AdminPaymentsPage({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.total}</CardTitle>
-            <CardDescription>Total payments</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.page}</CardTitle>
-            <CardDescription>Current page</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.pageCount}</CardTitle>
-            <CardDescription>Total pages</CardDescription>
-          </CardHeader>
-        </Card>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminStatCard label="Total payments" value={data.total} />
+        <AdminStatCard label="Current page" value={data.page} />
+        <AdminStatCard label="Total pages" value={data.pageCount} />
       </section>
 
       <Card className="border-border/70">

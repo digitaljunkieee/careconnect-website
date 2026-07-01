@@ -46,6 +46,12 @@ type DashboardShellProps = {
 };
 
 const SIDEBAR_STORAGE_KEY = "careconnect:dashboard-sidebar-collapsed";
+const ADMIN_BOTTOM_NAV_IDS = new Set([
+  "admin-overview",
+  "admin-workers",
+  "admin-facilities",
+  "admin-shifts"
+]);
 
 function normalizePath(value: string) {
   const cleaned = value.split("#")[0].split("?")[0].replace(/\/$/, "");
@@ -70,7 +76,9 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useDashboardTheme();
   const navItems = DASHBOARD_NAVIGATION[role];
-  const mobileNavItems = navItems.filter((item) => item.mobile !== false);
+  const mobileNavItems = navItems.filter((item) =>
+    role === "ADMIN" ? ADMIN_BOTTOM_NAV_IDS.has(item.id) : item.mobile !== false
+  );
   const dashboardSearchHref =
     role === "ADMIN"
       ? "/dashboard/admin/search"
@@ -327,7 +335,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
             compact ? "space-y-1 px-2" : "space-y-1 px-3"
           )}
         >
-          {mobileNavItems.map((item) => (
+          {navItems.map((item) => (
             <NavItemLink
               key={item.id}
               item={item}
@@ -382,7 +390,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
       <div className="relative z-10 flex min-h-screen">
         <aside
           className={cn(
-            "relative hidden border-r border-border/70 bg-background/70 backdrop-blur-2xl shadow-[12px_0_40px_rgba(2,6,23,0.08)] transition-[width] duration-300 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden",
+            "relative hidden shrink-0 border-r border-border/70 bg-background/70 backdrop-blur-2xl shadow-[12px_0_40px_rgba(2,6,23,0.08)] transition-[width] duration-300 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden",
             isSidebarCollapsed ? "w-20" : "w-64"
           )}
         >
@@ -391,8 +399,8 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 border-b border-border/70 bg-background/75 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-              <div className="flex items-center gap-2 sm:gap-3">
+            <div className="mx-auto flex w-full max-w-[1400px] min-w-0 items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8 lg:py-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button
@@ -435,19 +443,19 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                 >
                   <Menu className="h-4 w-4" />
                 </Button>
-                <p className="text-sm font-semibold tracking-[0.12em] text-foreground/80">
+                <p className="truncate text-xs font-semibold tracking-[0.1em] text-foreground/80 sm:text-sm sm:tracking-[0.12em]">
                   {currentPageLabel}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <NotificationBell />
 
                 <Button
                   asChild
                   variant="ghost"
                   size="icon"
-                  className={cn("h-11 w-11", headerIconButtonClassName)}
+                  className={cn("hidden h-10 w-10 sm:inline-flex lg:h-11 lg:w-11", headerIconButtonClassName)}
                 >
                   <Link aria-label="Search dashboard" href={dashboardSearchHref}>
                     <Search className="h-4 w-4" />
@@ -484,10 +492,10 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     <Button
                       variant="outline"
                       size="icon"
-                      className={cn("h-11 w-11 p-0", headerMenuButtonClassName)}
+                      className={cn("h-10 w-10 p-0 sm:h-11 sm:w-11", headerMenuButtonClassName)}
                       aria-label="Open account menu"
                     >
-                      <Avatar className="h-11 w-11 rounded-full">
+                      <Avatar className="h-10 w-10 rounded-full sm:h-11 sm:w-11">
                         {session?.user?.image ? (
                           <AvatarImage src={session.user.image} alt={`${userName} profile photo`} />
                         ) : null}
@@ -576,8 +584,10 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
             </div>
           </header>
 
-          <main className="flex-1 px-4 py-6 pb-28 sm:px-6 lg:px-8 lg:py-8 lg:pb-8">
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">{children}</div>
+          <main className="min-w-0 flex-1 overflow-x-hidden py-6 pb-28 lg:py-8 lg:pb-8">
+            <div className="mx-auto flex w-full max-w-[1400px] min-w-0 flex-col gap-6 px-4 sm:px-6 lg:px-8">
+              {children}
+            </div>
           </main>
         </div>
       </div>

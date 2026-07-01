@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/pagination-controls";
 import { VerificationDecisionDialog } from "@/components/admin/verification-decision-dialog";
+import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { VERIFICATION_STATUS_LABELS } from "@/lib/constants";
 import { getAdminVerificationQueueData } from "@/lib/admin-data";
 import {
@@ -81,21 +82,14 @@ export default async function AdminVerificationQueuePage({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Pending", summary.pending],
           ["In review", summary.inReview],
           ["Verified", summary.verified],
           ["Rejected", summary.rejected]
         ].map(([label, value]) => (
-          <Card key={label} className="border-border/70">
-            <CardContent className="p-4">
-              <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                {label}
-              </div>
-              <div className="mt-2 text-3xl font-semibold">{value}</div>
-            </CardContent>
-          </Card>
+          <AdminStatCard key={label} label={String(label)} value={value} />
         ))}
       </section>
 

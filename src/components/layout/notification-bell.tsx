@@ -67,7 +67,7 @@ export function NotificationBell() {
   }, [loadNotifications, open]);
 
   const triggerClassName = cn(
-    "relative h-11 w-11 shrink-0 rounded-full",
+    "relative h-10 w-10 shrink-0 rounded-full sm:h-11 sm:w-11",
     isDarkDashboard
       ? "border border-border/60 bg-background/70 text-foreground shadow-sm hover:bg-background/85"
       : "border border-border/70 bg-background/95 text-foreground shadow-sm hover:bg-accent/70"

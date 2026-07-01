@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/pagination-controls";
+import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import {
   MarkAllNotificationsButton,
   NotificationRowActions
@@ -85,25 +86,10 @@ export default async function AdminNotificationsPage({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.total}</CardTitle>
-            <CardDescription>Total notifications</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.unreadTotal}</CardTitle>
-            <CardDescription>Unread notifications</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-3xl">{data.pageCount}</CardTitle>
-            <CardDescription>Total pages</CardDescription>
-          </CardHeader>
-        </Card>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminStatCard label="Total notifications" value={data.total} />
+        <AdminStatCard label="Unread notifications" value={data.unreadTotal} />
+        <AdminStatCard label="Total pages" value={data.pageCount} />
       </section>
 
       <Card className="border-border/70">
