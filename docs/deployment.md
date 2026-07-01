@@ -19,7 +19,8 @@
 
 1. Deploy the `backend` folder as the API service.
 2. Set the API environment variables:
-   - Required to boot the service: `DATABASE_URL`
+   - Required: `DATABASE_URL` and either `JWT_SECRET` or `AUTH_SECRET`
+   - Set the signing secret to a long, random value and keep it stable across deploys.
    - Recommended for production: `APP_BASE_URL`, `CORS_ORIGIN`, `BACKEND_API_KEY`
    - Point `APP_BASE_URL` and `CORS_ORIGIN` at `https://careconnect-omega-one.vercel.app`
    - Optional tuning: `PORT`, `BACKEND_RATE_LIMIT_WINDOW_MS`, `BACKEND_RATE_LIMIT_MAX`

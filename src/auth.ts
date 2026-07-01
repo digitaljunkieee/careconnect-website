@@ -1,5 +1,5 @@
 import Credentials from "next-auth/providers/credentials";
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import { ROLE_HOME, type Role } from "@/lib/constants";
 import { getBackendBaseUrl } from "@/lib/backend-url";
 import { loginSchema } from "@/lib/validators/auth";
@@ -26,6 +26,10 @@ type BackendLoginResponse = {
     message?: string;
   };
 };
+
+class AuthenticationServiceUnavailable extends CredentialsSignin {
+  code = "authentication_unavailable";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: AUTH_SECRET,
@@ -55,21 +59,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const response = await fetch(`${getBackendBaseUrl()}/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(parsed.data),
-          cache: "no-store"
-        });
+        let response: Response;
+
+        try {
+          response = await fetch(`${getBackendBaseUrl()}/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(parsed.data),
+            cache: "no-store"
+          });
+        } catch {
+          throw new AuthenticationServiceUnavailable();
+        }
 
         const payload = (await response.json().catch(() => null)) as
           | BackendLoginResponse
           | null;
 
-        if (!response.ok || !payload?.success || !payload.data) {
+        if (response.status >= 500) {
+          throw new AuthenticationServiceUnavailable();
+        }
+
+        if (!response.ok) {
           return null;
+        }
+
+        if (!payload?.success || !payload.data) {
+          throw new AuthenticationServiceUnavailable();
         }
 
         return {

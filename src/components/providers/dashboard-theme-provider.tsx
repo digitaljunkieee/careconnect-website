@@ -84,14 +84,6 @@ export function DashboardThemeProvider({
   );
 
   React.useLayoutEffect(() => {
-    const browserTheme = readBrowserDashboardTheme();
-
-    if (browserTheme && browserTheme !== theme) {
-      setThemeState(browserTheme);
-      writeDashboardTheme(browserTheme);
-      return;
-    }
-
     writeDashboardTheme(theme);
   }, [theme]);
 

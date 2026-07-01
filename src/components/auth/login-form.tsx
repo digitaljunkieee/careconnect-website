@@ -44,6 +44,12 @@ export function LoginForm() {
       });
 
       if (!result?.ok || result.error) {
+        if (result?.code === "authentication_unavailable") {
+          throw new Error(
+            "The sign-in service is unavailable. Please try again shortly or contact support."
+          );
+        }
+
         throw new Error("Invalid email or password.");
       }
 
