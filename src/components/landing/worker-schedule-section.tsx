@@ -35,7 +35,7 @@ export function WorkerScheduleSection() {
                 <div className="relative aspect-[6/5] w-full overflow-hidden rounded-[28px]">
                   <Image
                     src="/images/workers/flexible-shift-support.webp"
-                    alt="Black care worker reviewing an activity schedule with an older South Asian woman"
+                    alt="White care worker reviewing an activity schedule with an older South Asian woman"
                     fill
                     quality={86}
                     sizes="(min-width: 1024px) 55vw, 100vw"
