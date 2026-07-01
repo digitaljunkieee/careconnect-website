@@ -99,7 +99,7 @@ export default async function FacilityProfilePage() {
                 <div className="flex min-w-0 items-center gap-4">
                   <Avatar className="h-14 w-14 shrink-0 rounded-2xl border border-border/70 bg-background">
                     {profile?.avatarUrl ? (
-                      <AvatarImage src={profile.avatarUrl} alt={companyName} />
+                      <AvatarImage src={profile.avatarUrl} alt={`${companyName} logo`} />
                     ) : null}
                     <AvatarFallback className="rounded-2xl bg-primary/10 text-primary">
                       {getInitials(companyName) || "CC"}

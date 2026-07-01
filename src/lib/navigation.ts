@@ -3,12 +3,16 @@ import {
   Bell,
   Building2,
   ClipboardList,
+  CreditCard,
+  FileText,
   History,
   LayoutDashboard,
+  ListChecks,
   ListTodo,
   Settings2,
   ShieldCheck,
   Users,
+  UsersRound,
   UserRound,
 } from "lucide-react";
 import type { Role } from "@/lib/constants";
@@ -26,9 +30,17 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
   ADMIN: [
     {
       id: "admin-overview",
-      label: "Overview",
-      href: "/dashboard/admin",
+      label: "Dashboard",
+      href: "/admin/dashboard",
       icon: LayoutDashboard,
+      mobile: true
+    },
+    {
+      id: "admin-users",
+      label: "Users",
+      href: "/dashboard/admin/users",
+      icon: UsersRound,
+      match: "prefix",
       mobile: true
     },
     {
@@ -44,6 +56,14 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       label: "Facilities",
       href: "/dashboard/admin/facilities",
       icon: Building2,
+      match: "prefix",
+      mobile: true
+    },
+    {
+      id: "admin-survey-leads",
+      label: "Survey Leads",
+      href: "/dashboard/admin/survey-leads",
+      icon: ListChecks,
       match: "prefix",
       mobile: true
     },
@@ -64,6 +84,14 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       mobile: true
     },
     {
+      id: "admin-applications",
+      label: "Applications",
+      href: "/dashboard/admin/applications",
+      icon: ClipboardList,
+      match: "prefix",
+      mobile: true
+    },
+    {
       id: "admin-assignments",
       label: "Assignments",
       href: "/dashboard/admin/assignments",
@@ -72,10 +100,26 @@ export const DASHBOARD_NAVIGATION: Record<Role, DashboardNavItem[]> = {
       mobile: true
     },
     {
+      id: "admin-payments",
+      label: "Payments",
+      href: "/dashboard/admin/payments",
+      icon: CreditCard,
+      match: "prefix",
+      mobile: true
+    },
+    {
       id: "admin-notifications",
       label: "Notifications",
       href: "/dashboard/admin/notifications",
       icon: Bell,
+      match: "prefix",
+      mobile: true
+    },
+    {
+      id: "admin-reports",
+      label: "Reports",
+      href: "/dashboard/admin/reports/compliance",
+      icon: FileText,
       match: "prefix",
       mobile: true
     },

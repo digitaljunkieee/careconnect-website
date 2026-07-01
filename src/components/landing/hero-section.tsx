@@ -111,13 +111,14 @@ export function HeroSection() {
         <div className={`${heroCopyRevealRightClass} -mt-3 relative h-[34rem] overflow-hidden rounded-none bg-[linear-gradient(180deg,#d7dce1_0%,#e8ecef_18%,#f4f6f8_34%,#eef3f6_46%,#d9eef9_62%,#076c82_100%)] sm:h-[38rem] md:h-[42rem] lg:mt-0 lg:min-h-[100svh] lg:h-auto lg:rounded-l-[3rem]`} style={{ animationDelay: "120ms" }}>
           <div className="relative h-full overflow-hidden">
             <Image
-              src="/images/landing/hero-img.png"
-              alt="Care worker supporting an older adult"
+              src="/images/hero/care-team-conversation.webp"
+              alt="Black care professional talking with an older Black man in a residential care home"
               fill
               priority
+              quality={88}
               sizes="(min-width: 1024px) 48vw, 100vw"
               className="z-0 object-cover"
-              style={{ objectPosition: "60% 18%" }}
+              style={{ objectPosition: "center 36%" }}
             />
 
             <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_28%_16%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_86%_18%,rgba(255,255,255,0.08),transparent_22%),linear-gradient(180deg,rgba(15,23,42,0.02)_0%,rgba(15,23,42,0.01)_34%,transparent_62%)]" />

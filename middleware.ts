@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { ROLE_HOME, type Role } from "@/lib/constants";
 
 const ROUTE_RULES = [
+  { prefix: "/admin", role: "ADMIN" },
   { prefix: "/dashboard/admin", role: "ADMIN" },
   { prefix: "/dashboard/worker", role: "WORKER" },
   { prefix: "/dashboard/facility", role: "FACILITY" }
@@ -23,7 +24,11 @@ export async function middleware(request: NextRequest) {
 
   const matchedRule = ROUTE_RULES.find((rule) => pathname.startsWith(rule.prefix));
 
-  if (matchedRule && token.role !== matchedRule.role) {
+  if (
+    matchedRule &&
+    (token.role !== matchedRule.role ||
+      (matchedRule.role === "ADMIN" && token.isAdmin !== true))
+  ) {
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
@@ -36,5 +41,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"]
+  matcher: ["/admin/:path*", "/dashboard/:path*"]
 };

@@ -11,3 +11,4 @@ export { default as EmailQueueJob } from "./EmailQueueJob";
 export { default as WebhookEventLog } from "./WebhookEventLog";
 export { default as Notification } from "./Notification";
 export { default as AuditLog } from "./AuditLog";
+export { default as SurveyLead } from "./SurveyLead";

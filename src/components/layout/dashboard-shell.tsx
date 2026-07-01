@@ -358,7 +358,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
             <div className={sidebarIdentityClassName}>
               <Avatar className="h-10 w-10 shrink-0 rounded-full">
                 {session?.user?.image ? (
-                  <AvatarImage src={session.user.image} alt={userName} />
+                  <AvatarImage src={session.user.image} alt={`${userName} profile photo`} />
                 ) : null}
                 <AvatarFallback className="rounded-full bg-primary/10 text-primary">
                   {initials || "CC"}
@@ -489,7 +489,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                     >
                       <Avatar className="h-11 w-11 rounded-full">
                         {session?.user?.image ? (
-                          <AvatarImage src={session.user.image} alt={userName} />
+                          <AvatarImage src={session.user.image} alt={`${userName} profile photo`} />
                         ) : null}
                         <AvatarFallback className="rounded-full bg-primary/10 text-primary">
                           {initials || "CC"}
@@ -507,7 +507,7 @@ export function DashboardShell({ children, role }: DashboardShellProps) {
                       <div className={dropdownLabelPanelClassName}>
                         <Avatar className={dropdownAvatarClassName}>
                           {session?.user?.image ? (
-                            <AvatarImage src={session.user.image} alt={userName} />
+                            <AvatarImage src={session.user.image} alt={`${userName} profile photo`} />
                           ) : null}
                           <AvatarFallback className={dropdownAvatarFallbackClassName}>
                             {initials || "CC"}

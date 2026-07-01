@@ -9,7 +9,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_HOME: Record<Role, string> = {
-  ADMIN: "/dashboard/admin",
+  ADMIN: "/admin/dashboard",
   WORKER: "/dashboard/worker",
   FACILITY: "/dashboard/facility"
 };

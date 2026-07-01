@@ -14,7 +14,7 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user.role !== "ADMIN" || session.user.isAdmin !== true) {
     redirect("/unauthorized");
   }
 

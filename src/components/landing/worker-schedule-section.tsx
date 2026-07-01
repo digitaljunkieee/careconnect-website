@@ -34,13 +34,13 @@ export function WorkerScheduleSection() {
               <div className="group relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.34)] transition-transform duration-500 hover:-translate-y-1">
                 <div className="relative aspect-[6/5] w-full overflow-hidden rounded-[28px]">
                   <Image
-                    src="/images/landing/hero-careworker-1.jpg"
-                    alt="Care worker supporting an older adult in a care setting"
+                    src="/images/workers/flexible-shift-support.webp"
+                    alt="Black care worker reviewing an activity schedule with an older South Asian woman"
                     fill
-                    priority
+                    quality={86}
                     sizes="(min-width: 1024px) 55vw, 100vw"
                     className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.02]"
-                    style={{ objectPosition: "center 28%" }}
+                    style={{ objectPosition: "center 42%" }}
                   />
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,108,130,0.02),rgba(7,108,130,0.14))]" />
                 </div>

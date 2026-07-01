@@ -42,19 +42,19 @@ const faqItems: FaqItem[] = [
 
 const careShowcaseImages = [
   {
-    src: "/images/landing/hero-careworker-1.jpg",
-    alt: "Care worker supporting an older adult",
-    objectPosition: "center 28%"
+    src: "/images/community/home-care-cooking.webp",
+    alt: "Black home-care worker preparing lunch with an older Black woman",
+    objectPosition: "center 42%"
   },
   {
-    src: "/images/landing/hero-careworker-2.jpg",
-    alt: "Care professional supporting a patient",
-    objectPosition: "center 30%"
+    src: "/images/community/garden-mobility-support.webp",
+    alt: "Mixed-race care professional walking with an older South Asian man in a care-home garden",
+    objectPosition: "center 38%"
   },
   {
-    src: "/images/landing/hero-careworker-3.jpg",
-    alt: "Care worker and patient in a home setting",
-    objectPosition: "center 22%"
+    src: "/images/community/family-care-planning.webp",
+    alt: "Black family discussing a care plan with an East Asian care professional",
+    objectPosition: "center 40%"
   }
 ];
 
@@ -71,7 +71,10 @@ export function FaqSection() {
   }, []);
 
   return (
-    <section className="bg-white px-4 py-14 text-slate-950 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+    <section
+      id="faq"
+      className="bg-white px-4 py-14 text-slate-950 sm:px-6 sm:py-16 lg:px-8 lg:py-20"
+    >
       <div className="mx-auto max-w-7xl">
         <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] lg:gap-12">
           <div className="max-w-[40rem]">
@@ -113,6 +116,7 @@ export function FaqSection() {
                         src={image.src}
                         alt={image.alt}
                         fill
+                        quality={86}
                         sizes="(min-width: 1024px) 38rem, (min-width: 640px) 88vw, 94vw"
                         className={[
                           "object-cover transition-transform duration-700 ease-out",

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,13 +41,12 @@ export function AssignWorkerDialog({ shiftId, workers }: AssignWorkerDialogProps
     setIsSaving(true);
 
     try {
-      const response = await fetch(`/api/admin/shifts/${shiftId}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/admin/shifts/${shiftId}/assign-worker`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          action: "REASSIGN",
           workerId,
           notes
         })
@@ -116,7 +116,8 @@ export function AssignWorkerDialog({ shiftId, workers }: AssignWorkerDialogProps
             Cancel
           </Button>
           <Button disabled={isSaving || !workerId} onClick={handleSubmit}>
-            {isSaving ? "Saving..." : "Assign"}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isSaving ? "Assigning..." : "Assign worker"}
           </Button>
         </DialogFooter>
       </DialogContent>

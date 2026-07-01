@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ROLE_HOME } from "@/lib/constants";
 import {
   AudienceSwitchSection,
+  BenefitsSection,
   ContactSection,
   FaqSection,
   HeroSection,
@@ -27,7 +28,7 @@ export default async function HomePage() {
       <HeroSection />
       <WorkerScheduleSection />
       <AudienceSwitchSection />
-      {/* <BenefitsSection /> */}
+      <BenefitsSection />
       <FaqSection />
       <ContactSection />
       <LandingMarquee />

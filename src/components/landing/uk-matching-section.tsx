@@ -8,12 +8,12 @@ export function UkMatchingSection() {
         <div className="relative w-full overflow-hidden rounded-[2rem] bg-[rgba(255,255,255,0.68)] px-5 py-8 text-center shadow-[0_24px_80px_-48px_rgba(15,23,42,0.18)] backdrop-blur-[14px] sm:px-8 sm:py-10 lg:px-12 lg:py-14">
           <div className="pointer-events-none absolute inset-0">
             <Image
-              src="/images/landing/ukimgbg.png"
+              src="/images/facilities/care-network-background.svg"
               alt=""
               fill
               sizes="100vw"
               aria-hidden="true"
-              className="object-contain object-center opacity-[0.26] saturate-[1.1] contrast-125 mix-blend-multiply"
+              className="object-cover object-center opacity-[0.32] saturate-[1.05] mix-blend-multiply"
             />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.52),rgba(255,255,255,0.88)_74%)]" />
           </div>

@@ -17,6 +17,10 @@ type BackendLoginResponse = {
     firstName?: string;
     lastName?: string;
     avatarUrl?: string;
+    isAdmin?: boolean;
+    accessToken?: string;
+    tokenType?: "Bearer";
+    expiresIn?: number;
   };
   error?: {
     message?: string;
@@ -75,7 +79,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: payload.data.role,
           firstName: payload.data.firstName ?? "",
           lastName: payload.data.lastName ?? "",
-          image: payload.data.avatarUrl ?? ""
+          image: payload.data.avatarUrl ?? "",
+          isAdmin: payload.data.isAdmin ?? payload.data.role === "ADMIN",
+          accessToken: payload.data.accessToken ?? ""
         };
       }
     })
@@ -88,6 +94,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.image = user.image ?? token.image ?? null;
+        token.isAdmin = user.isAdmin ?? user.role === "ADMIN";
+        token.accessToken = user.accessToken ?? "";
       }
 
       if (trigger === "update") {
@@ -109,6 +117,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.lastName = token.lastName ?? undefined;
         session.user.name = session.user.name ?? session.user.firstName ?? "";
         session.user.image = typeof token.image === "string" ? token.image : undefined;
+        session.user.isAdmin = Boolean(token.isAdmin && token.role === "ADMIN");
+        session.user.accessToken =
+          typeof token.accessToken === "string" ? token.accessToken : undefined;
       }
 
       return session;

@@ -6,9 +6,9 @@ import {
 } from "@/lib/validators/admin";
 import {
   cancelAdminShift,
-  deleteShiftRecord,
-  reassignAdminShift
+  deleteShiftRecord
 } from "@/lib/admin-actions";
+import { assignWorkerThroughBackend } from "@/lib/backend-admin";
 
 type RouteContext = {
   params: Promise<{ shiftId: string }>;
@@ -39,14 +39,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return jsonError("Worker ID is required.", 400);
     }
 
-    const result = await reassignAdminShift(
-      admin.id,
-      shiftId,
-      parsed.data.workerId,
-      parsed.data.notes
-    );
+    if (!admin.isAdmin) {
+      return jsonError("Administrator access is required.", 403);
+    }
 
-    return jsonSuccess(result, "Shift reassigned.");
+    const result = await assignWorkerThroughBackend(admin.accessToken ?? "", shiftId, {
+      workerId: parsed.data.workerId,
+      notes: parsed.data.notes
+    });
+
+    return jsonSuccess(result, "Worker assigned successfully.");
   } catch (error) {
     return jsonError(
       error instanceof Error ? error.message : "Unable to update shift.",

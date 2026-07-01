@@ -7,6 +7,12 @@ type AuthShellProps = {
   children: ReactNode;
 };
 
+const authProfileImages = [
+  "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&crop=faces&w=160&h=160&q=85",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&crop=faces&w=160&h=160&q=85",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&crop=faces&w=160&h=160&q=85"
+] as const;
+
 export function AuthShell({ children }: AuthShellProps) {
   return (
     <section className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(43,185,255,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(19,217,203,0.08),transparent_26%),linear-gradient(180deg,#f8fbff_0%,#eef5fb_100%)] px-0 py-0 lg:px-4 lg:py-4">
@@ -44,13 +50,14 @@ export function AuthShell({ children }: AuthShellProps) {
 
         <aside className="relative hidden min-h-[22rem] w-full overflow-hidden bg-slate-950 lg:flex lg:min-h-full lg:flex-1">
           <Image
-            src="/images/landing/hero-careworker-3.jpg"
-            alt="Care worker supporting an older adult"
+            src="/images/hero/auth-care-connection.webp"
+            alt="Black care professional arranging flowers with an older mixed-race woman"
             fill
             priority
+            quality={88}
             sizes="55vw"
             className="object-cover object-center"
-            style={{ objectPosition: "center 18%" }}
+            style={{ objectPosition: "center 38%" }}
           />
 
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,10,28,0.16)_0%,rgba(3,10,28,0.28)_42%,rgba(2,24,44,0.86)_100%)]" />
@@ -66,33 +73,22 @@ export function AuthShell({ children }: AuthShellProps) {
             <div className="absolute bottom-5 right-5 z-20 sm:bottom-6 sm:right-6">
               <div className="inline-flex items-center gap-3">
                 <div className="flex -space-x-2">
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full ring-1 ring-white/75 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)]">
-                    <Image
-                      src="/images/landing/hero-careworker-1.jpg"
-                      alt="Care worker profile"
-                      fill
-                      sizes="40px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full ring-1 ring-white/75 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)]">
-                    <Image
-                      src="/images/landing/hero-careworker-2.jpg"
-                      alt="Care worker profile"
-                      fill
-                      sizes="40px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full ring-1 ring-white/75 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)]">
-                    <Image
-                      src="/images/landing/hero-careworker-3.jpg"
-                      alt="Care worker profile"
-                      fill
-                      sizes="40px"
-                      className="object-cover"
-                    />
-                  </div>
+                  {authProfileImages.map((src, index) => (
+                    <span
+                      key={src}
+                      aria-hidden="true"
+                      className="relative inline-flex h-10 w-10 overflow-hidden rounded-full bg-white ring-2 ring-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)]"
+                      style={{ zIndex: 3 - index }}
+                    >
+                      <Image
+                        src={src}
+                        alt=""
+                        fill
+                        sizes="40px"
+                        className="object-cover object-center"
+                      />
+                    </span>
+                  ))}
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-950 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)]">
                     +
                   </span>

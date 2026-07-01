@@ -55,7 +55,7 @@ export function LoginForm() {
       }
 
       toast.success("Signed in successfully.");
-      router.replace(ROLE_HOME[role]);
+      router.replace(role === "ADMIN" ? "/admin/dashboard" : ROLE_HOME[role]);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to sign in.");

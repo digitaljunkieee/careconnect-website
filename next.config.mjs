@@ -5,6 +5,15 @@ const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.resolve(process.cwd()),
   serverExternalPackages: ["bcrypt", "mongodb", "mongoose"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/photo-**"
+      }
+    ]
+  },
   async headers() {
     return [
       {

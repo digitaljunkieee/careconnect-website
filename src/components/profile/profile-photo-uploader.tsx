@@ -125,7 +125,9 @@ export function ProfilePhotoUploader({
           aria-label={`${currentImage ? "Change" : "Upload"} ${entityLabel}`}
         >
           <Avatar className={avatarStyles}>
-            {currentImage ? <AvatarImage src={currentImage} alt={name} /> : null}
+            {currentImage ? (
+              <AvatarImage src={currentImage} alt={`${name || "User"} profile photo`} />
+            ) : null}
             <AvatarFallback className="rounded-[1.5rem] text-base">{initials || "CC"}</AvatarFallback>
           </Avatar>
           <span className="absolute inset-0 grid place-items-center rounded-[1.75rem] bg-background/0 opacity-0 transition group-hover:bg-background/15 group-hover:opacity-100">

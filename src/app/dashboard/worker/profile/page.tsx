@@ -180,7 +180,10 @@ export default async function WorkerProfilePage() {
                 <div className="flex min-w-0 items-center gap-4">
                   <Avatar className="h-16 w-16 rounded-[1.75rem] border border-white/10 bg-[#15243A] shadow-sm sm:h-20 sm:w-20">
                     {profile?.avatarUrl || user.image ? (
-                      <AvatarImage src={profile?.avatarUrl || user.image || ""} alt={fullName} />
+                      <AvatarImage
+                        src={profile?.avatarUrl || user.image || ""}
+                        alt={`${fullName} profile photo`}
+                      />
                     ) : null}
                     <AvatarFallback className="rounded-[1.5rem] bg-white/5 text-base text-white">
                       {getInitials(fullName) || "CC"}

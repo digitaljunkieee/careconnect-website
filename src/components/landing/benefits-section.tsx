@@ -20,7 +20,10 @@ const facilityTrustPoints = [
 
 export function BenefitsSection() {
   return (
-    <section className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden bg-white">
+    <section
+      id="why-careconnect"
+      className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden bg-white"
+    >
       <BrandWatermark
         size="lg"
         tone="light"
@@ -30,13 +33,13 @@ export function BenefitsSection() {
       <div className="grid lg:min-h-[36rem] lg:grid-cols-2 lg:items-stretch">
         <div className="group relative min-h-[20rem] overflow-hidden lg:min-h-[36rem]">
           <Image
-            src="/images/landing/senior-woman-with-her-caregiver-outdoor.jpg"
-            alt="Senior woman with her caregiver in a calm outdoor care setting"
+            src="/images/facilities/care-home-team.webp"
+            alt="Black care-home manager speaking with a diverse team of care professionals"
             fill
+            quality={86}
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.02]"
-            style={{ objectPosition: "center 32%" }}
-            priority
+            style={{ objectPosition: "47% center" }}
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/10 via-transparent to-transparent" />
           <div className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
