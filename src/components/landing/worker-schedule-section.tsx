@@ -45,7 +45,7 @@ export function WorkerScheduleSection() {
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,108,130,0.02),rgba(7,108,130,0.14))]" />
                 </div>
 
-                <div className="absolute bottom-[7.25rem] right-3 z-20 w-[10rem] rounded-2xl border border-white/70 bg-white/95 px-3.5 py-3 shadow-xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-md md:bottom-auto md:right-6 md:top-6 md:w-auto md:max-w-[12rem] md:px-4">
+                <div className="absolute bottom-[7.25rem] right-3 z-20 hidden w-[10rem] rounded-2xl border border-white/70 bg-white/95 px-3.5 py-3 shadow-xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-md md:bottom-auto md:right-6 md:top-6 md:block md:w-auto md:max-w-[12rem] md:px-4">
                   <div className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 md:text-xs">
                     <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600 ring-4 ring-emerald-100" />
                     Shift Available
